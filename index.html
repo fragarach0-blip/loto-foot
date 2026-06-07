@@ -1558,6 +1558,11 @@ function teamsAreKnown(teams) {
   return !!(TEAMS[teams.t1] && TEAMS[teams.t2]);
 }
 
+function matchUnlockText(m) {
+  const date = matchKickoff(m).toLocaleDateString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+  return `Deverrouille plus tard : les vraies equipes seront connues avant le match du ${date}.`;
+}
+
 function oddsHTML(m) {
   const odds = S.matchMeta?.[m.id]?.odds;
   if (!odds) return '';
@@ -2452,7 +2457,7 @@ function renderPronosMatches(pid) {
       const teamsKnown = !isFinalMatch(m) || teamsAreKnown(teams);
       const locked = isPredictionLocked(m) || !teamsKnown;
       const dateStr = matchKickoff(m).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      const badge = matchBadge(m, pt);
+      const badge = !teamsKnown ? '<span class="result-badge badge-locked">Plus tard</span>' : matchBadge(m, pt);
       const dis = locked ? 'disabled' : '';
       const v1 = pr.s1!==''&&pr.s1!=null ? pr.s1 : '';
       const v2 = pr.s2!==''&&pr.s2!=null ? pr.s2 : '';
@@ -2483,7 +2488,7 @@ function renderPronosMatches(pid) {
           </div>
           <div class="team">${teamHTML(teams.t2)}</div>
         </div>
-        ${!teamsKnown?`<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Les equipes de ce match ne sont pas encore connues dans la vraie competition.</div>`:''}
+        ${!teamsKnown?`<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">${matchUnlockText(m)}</div>`:''}
         ${teamsKnown&&locked&&!res?`<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Match commencé — pronostic verrouillé</div>`:''}
         ${res&&res.s1!==''&&res.s1!=null?`<div class="official-score">Résultat officiel : <strong>${res.s1} – ${res.s2}</strong></div>`:''}
         ${oddsHTML(m)}
@@ -2496,6 +2501,8 @@ function renderPronosMatches(pid) {
 function updatePred(pid, mid, key, val) {
   const match = MATCHES.find(m=>m.id===mid);
   if (match && isPredictionLocked(match)) { toast('Match verrouillé'); renderPronosMatches(pid); return; }
+  const active = document.querySelector('.view.active')?.id;
+  if (active==='view-pronos' && match && isFinalMatch(match) && !teamsAreKnown(matchTeams(match))) { toast(matchUnlockText(match)); renderPronosMatches(pid); return; }
   if (!S.preds[pid]) S.preds[pid]={};
   if (!S.preds[pid][mid]) S.preds[pid][mid]={s1:'',s2:''};
   S.preds[pid][mid][key] = val;
@@ -2503,7 +2510,6 @@ function updatePred(pid, mid, key, val) {
   event.target.classList.toggle('filled', val!=='');
   save();
   updateProgBar(pid);
-  const active = document.querySelector('.view.active')?.id;
   const pr = S.preds[pid][mid];
   if (active==='view-tournoi' && pr.s1!==''&&pr.s1!=null&&pr.s2!==''&&pr.s2!=null) setTimeout(()=>renderTournoi(), 0);
   if (active==='view-pronos' && match && isFinalMatch(match) && pr.s1!==''&&pr.s1!=null&&pr.s2!==''&&pr.s2!=null) setTimeout(()=>renderPronosMatches(pid), 0);
@@ -2513,6 +2519,8 @@ function updatePred(pid, mid, key, val) {
 function adjustPred(pid, mid, key, delta) {
   const match = MATCHES.find(m=>m.id===mid);
   if (match && isPredictionLocked(match)) { toast('Match verrouillé'); return; }
+  const active = document.querySelector('.view.active')?.id;
+  if (active==='view-pronos' && match && isFinalMatch(match) && !teamsAreKnown(matchTeams(match))) { toast(matchUnlockText(match)); renderPronosMatches(pid); return; }
   if (!S.preds[pid]) S.preds[pid]={};
   if (!S.preds[pid][mid]) S.preds[pid][mid]={s1:'',s2:''};
   const cur = S.preds[pid][mid][key];
@@ -2524,7 +2532,6 @@ function adjustPred(pid, mid, key, delta) {
   if (el) { el.value = newVal; el.classList.add('filled'); }
   save();
   updateProgBar(pid);
-  const active = document.querySelector('.view.active')?.id;
   if (active==='view-tournoi') setTimeout(()=>renderTournoi(), 0);
   if (active==='view-pronos' && match && isFinalMatch(match)) setTimeout(()=>renderPronosMatches(pid), 0);
   if (active==='view-classement') renderClassement();

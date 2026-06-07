@@ -2085,6 +2085,12 @@ function renderTournoiScore(pid) {
   </div>`;
 }
 
+function groupPredsFilledCount(pid) {
+  const groupMatches = MATCHES.filter(m=>String(m.g).match(/^[A-L]$/));
+  const filled = groupMatches.filter(m=>!!predResultForMatch(pid, m.id)).length;
+  return { filled, total: groupMatches.length };
+}
+
 function tournoiPredFilledCount(pid) {
   return TOURNOI_ROUNDS.flatMap(r=>r.ids).filter(mid=>!!predResultForMatch(pid, mid)).length;
 }
@@ -2173,6 +2179,23 @@ function renderTournoi() {
     content.innerHTML = `<div class="empty-state" style="padding:28px 20px">
       <div class="empty-title">Choisis ton nom</div>
       <div class="empty-desc">Puis remplis ton parcours de tournoi</div>
+    </div>`;
+    return;
+  }
+  const groupProgress = groupPredsFilledCount(currentTournoiPid);
+  if (groupProgress.filled < groupProgress.total) {
+    const pct = Math.round(groupProgress.filled / groupProgress.total * 100);
+    content.innerHTML = `<div class="tournoi-progress">
+      <div class="tournoi-progress-head">
+        <span>Groupes requis</span>
+        <span class="tournoi-progress-count">${groupProgress.filled}/${groupProgress.total} scores de groupes</span>
+      </div>
+      <div class="tournoi-progress-track"><div class="tournoi-progress-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="empty-state" style="padding:28px 20px">
+      <div class="empty-title">Tournoi verrouille</div>
+      <div class="empty-desc">Remplis tous tes pronostics de phase de groupes avant de saisir les matchs du tournoi.</div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="currentPid='${currentTournoiPid}';showView('pronos')">Completer les pronos</button>
     </div>`;
     return;
   }

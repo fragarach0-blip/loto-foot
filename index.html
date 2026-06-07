@@ -358,6 +358,10 @@ nav button.active {
 .score-input:focus { border-bottom-color: var(--red); }
 .score-input.filled { border-bottom-color: var(--ink); }
 .score-input:disabled { opacity: .32; cursor: not-allowed; }
+.penalty-pick { display:flex; gap:6px; margin:8px 0 0; justify-content:center; align-items:center; flex-wrap:wrap; font-family:'DM Mono',monospace; font-size:.64rem; color:var(--ink-3); }
+.penalty-btn { min-height:32px; border:1px solid var(--border-2); background:var(--paper); color:var(--ink-2); border-radius:6px; padding:5px 8px; font-family:'Space Grotesk',sans-serif; font-size:.68rem; font-weight:700; cursor:pointer; }
+.penalty-btn.sel { border-color:var(--red); background:var(--red-bg); color:var(--red); }
+.penalty-btn:disabled { opacity:.4; cursor:not-allowed; }
 .score-sep {
   font-family: 'DM Mono', monospace;
   font-size: .8rem;
@@ -1455,8 +1459,28 @@ function startSync() {
 
 function isFinalMatch(m) { return !String(m.g).match(/^[A-L]$/); }
 
+function isPredCompleteForMatch(pred, m) {
+  if (!pred || pred.s1===''||pred.s1==null||pred.s2===''||pred.s2==null) return false;
+  const s1 = +pred.s1, s2 = +pred.s2;
+  if (isNaN(s1)||isNaN(s2)) return false;
+  return !isFinalMatch(m) || s1 !== s2 || pred.winner === 't1' || pred.winner === 't2';
+}
+
 function scoringRules(m) {
   return isFinalMatch(m) ? { exact:5, correct:2 } : { exact:3, correct:1 };
+}
+
+function winnerSideFromScores(s1, s2, fallback = '') {
+  if (s1 > s2) return 't1';
+  if (s2 > s1) return 't2';
+  return fallback || '';
+}
+
+function officialWinnerSide(mid, s1, s2) {
+  const metaWinner = S.matchMeta?.[mid]?.winner;
+  if (metaWinner === 'HOME_TEAM') return 't1';
+  if (metaWinner === 'AWAY_TEAM') return 't2';
+  return winnerSideFromScores(s1, s2);
 }
 
 function pts(pred, res, m) {
@@ -1465,9 +1489,14 @@ function pts(pred, res, m) {
   const ps1=+pred.s1, ps2=+pred.s2, rs1=+res.s1, rs2=+res.s2;
   if (isNaN(ps1)||isNaN(ps2)||isNaN(rs1)||isNaN(rs2)) return null;
   const rules = scoringRules(m);
-  if (ps1===rs1 && ps2===rs2) return rules.exact;
+  const predWinner = winnerSideFromScores(ps1, ps2, pred.winner);
+  const realWinner = isFinalMatch(m) ? officialWinnerSide(m.id, rs1, rs2) : winnerSideFromScores(rs1, rs2);
+  if (isFinalMatch(m) && ps1===ps2 && !predWinner) return null;
+  if (isFinalMatch(m) && rs1===rs2 && !realWinner) return null;
+  if (ps1===rs1 && ps2===rs2) return (!isFinalMatch(m) || !realWinner || predWinner===realWinner) ? rules.exact : 0;
   const pr = ps1>ps2?1:ps1<ps2?-1:0;
   const rr = rs1>rs2?1:rs1<rs2?-1:0;
+  if (isFinalMatch(m) && pr===0 && rr===0) return predWinner && predWinner===realWinner ? rules.correct : 0;
   if (pr===rr) return rules.correct;
   return 0;
 }
@@ -1620,7 +1649,7 @@ function playerStats(pid) {
   const played = [];
   for (const m of MATCHES) {
     const pr = p[m.id];
-    if (pr && pr.s1!==''&&pr.s1!=null&&pr.s2!==''&&pr.s2!=null) filled++;
+    if (isPredCompleteForMatch(pr, m)) filled++;
     const r = S.results[m.id];
     if (!pr||!r) continue;
     const pt = pts(pr, r, m);
@@ -1993,6 +2022,9 @@ function predictedKnockoutSide(pid, mid, winner = true) {
   if (!teams.t1 || !teams.t2) return null;
   if (r.s1 > r.s2) return winner ? teams.t1 : teams.t2;
   if (r.s2 > r.s1) return winner ? teams.t2 : teams.t1;
+  const side = S.preds?.[pid]?.[mid]?.winner;
+  if (side === 't1') return winner ? teams.t1 : teams.t2;
+  if (side === 't2') return winner ? teams.t2 : teams.t1;
   return null;
 }
 
@@ -2098,6 +2130,41 @@ function renderTournoiScore(pid) {
   </div>`;
 }
 
+function needsPenaltyWinner(m, pr) {
+  if (!isFinalMatch(m) || !pr || pr.s1===''||pr.s1==null||pr.s2===''||pr.s2==null) return false;
+  return +pr.s1 === +pr.s2;
+}
+
+function penaltyWinnerHTML(pid, m, teams, pr, disabled = false) {
+  if (!needsPenaltyWinner(m, pr) || !teams.t1 || !teams.t2) return '';
+  const dis = disabled ? 'disabled' : '';
+  return `<div class="penalty-pick">
+    <span>Vainqueur TAB</span>
+    <button class="penalty-btn ${pr.winner==='t1'?'sel':''}" onclick="setPredPenaltyWinner('${pid}',${m.id},'t1')" ${dis}>${htmlEscape(teams.t1)}</button>
+    <button class="penalty-btn ${pr.winner==='t2'?'sel':''}" onclick="setPredPenaltyWinner('${pid}',${m.id},'t2')" ${dis}>${htmlEscape(teams.t2)}</button>
+  </div>`;
+}
+
+function setPredPenaltyWinner(pid, mid, side) {
+  const match = MATCHES.find(m=>m.id===mid);
+  if (match && isPredictionLocked(match)) { toast('Match verrouille'); return; }
+  if (!S.preds[pid]) S.preds[pid]={};
+  if (!S.preds[pid][mid]) S.preds[pid][mid]={s1:'',s2:''};
+  S.preds[pid][mid].winner = side;
+  save();
+  const active = document.querySelector('.view.active')?.id;
+  if (active==='view-tournoi') renderTournoi();
+  if (active==='view-pronos' && currentPid) renderPronosMatches(currentPid);
+  if (active==='view-classement') renderClassement();
+}
+
+function normalizePredPenaltyWinner(pid, mid) {
+  const match = MATCHES.find(m=>m.id===mid);
+  const pr = S.preds?.[pid]?.[mid];
+  if (!match || !pr) return;
+  if (!needsPenaltyWinner(match, pr)) delete pr.winner;
+}
+
 function groupPredsFilledCount(pid) {
   const groupMatches = MATCHES.filter(m=>String(m.g).match(/^[A-L]$/));
   const filled = groupMatches.filter(m=>!!predResultForMatch(pid, m.id)).length;
@@ -2105,7 +2172,10 @@ function groupPredsFilledCount(pid) {
 }
 
 function tournoiPredFilledCount(pid) {
-  return TOURNOI_ROUNDS.flatMap(r=>r.ids).filter(mid=>!!predResultForMatch(pid, mid)).length;
+  return TOURNOI_ROUNDS.flatMap(r=>r.ids).filter(mid=>{
+    const m = MATCHES.find(x=>x.id===mid);
+    return m && isPredCompleteForMatch(S.preds?.[pid]?.[mid], m);
+  }).length;
 }
 
 function renderTournoiMatch(pid, m) {
@@ -2143,6 +2213,7 @@ function renderTournoiMatch(pid, m) {
           <span class="score-area-gap"></span>
           <button class="score-step-btn" onclick="adjustPred('${pid}',${m.id},'s2',-1)" ${dis}>−</button>
         </div>
+        ${penaltyWinnerHTML(pid, m, teams, pr, locked)}
       </div>
       <div class="team">${teams.t2 ? teamHTML(teams.t2) : '<span class="tname">A determiner</span>'}</div>
     </div>
@@ -2359,6 +2430,7 @@ function renderPronosMatches(pid) {
               <span class="score-area-gap"></span>
               <button class="score-step-btn" onclick="adjustPred('${pid}',${m.id},'s2',-1)" ${dis}>−</button>
             </div>
+            ${penaltyWinnerHTML(pid, m, teams, pr, locked)}
           </div>
           <div class="team">${teamHTML(teams.t2)}</div>
         </div>
@@ -2377,12 +2449,14 @@ function updatePred(pid, mid, key, val) {
   if (!S.preds[pid]) S.preds[pid]={};
   if (!S.preds[pid][mid]) S.preds[pid][mid]={s1:'',s2:''};
   S.preds[pid][mid][key] = val;
+  normalizePredPenaltyWinner(pid, mid);
   event.target.classList.toggle('filled', val!=='');
   save();
   updateProgBar(pid);
   const active = document.querySelector('.view.active')?.id;
   const pr = S.preds[pid][mid];
   if (active==='view-tournoi' && pr.s1!==''&&pr.s1!=null&&pr.s2!==''&&pr.s2!=null) setTimeout(()=>renderTournoi(), 0);
+  if (active==='view-pronos' && match && isFinalMatch(match) && pr.s1!==''&&pr.s1!=null&&pr.s2!==''&&pr.s2!=null) setTimeout(()=>renderPronosMatches(pid), 0);
   if (active==='view-classement') renderClassement();
 }
 
@@ -2395,12 +2469,14 @@ function adjustPred(pid, mid, key, delta) {
   const curVal = (cur===''||cur==null) ? 0 : +cur;
   const newVal = Math.max(0, curVal + delta);
   S.preds[pid][mid][key] = String(newVal);
+  normalizePredPenaltyWinner(pid, mid);
   const el = document.getElementById(`si-${mid}-${key}`);
   if (el) { el.value = newVal; el.classList.add('filled'); }
   save();
   updateProgBar(pid);
   const active = document.querySelector('.view.active')?.id;
   if (active==='view-tournoi') setTimeout(()=>renderTournoi(), 0);
+  if (active==='view-pronos' && match && isFinalMatch(match)) setTimeout(()=>renderPronosMatches(pid), 0);
   if (active==='view-classement') renderClassement();
 }
 
@@ -2477,6 +2553,7 @@ function renderResultsContent() {
           </div>
           <div class="team">${teamHTML(teams.t2)}</div>
         </div>
+        ${resultPenaltyWinnerHTML(m, teams, res)}
         ${oddsHTML(m)}
       </div>`;
     }
@@ -2484,9 +2561,42 @@ function renderResultsContent() {
   document.getElementById('results-content').innerHTML = html;
 }
 
+function resultNeedsPenaltyWinner(m, res) {
+  if (!isFinalMatch(m) || !res || res.s1===''||res.s1==null||res.s2===''||res.s2==null) return false;
+  return +res.s1 === +res.s2;
+}
+
+function resultPenaltyWinnerHTML(m, teams, res) {
+  if (!resultNeedsPenaltyWinner(m, res) || !teams.t1 || !teams.t2) return '';
+  const winner = S.matchMeta?.[m.id]?.winner || '';
+  return `<div class="penalty-pick">
+    <span>Vainqueur TAB</span>
+    <button class="penalty-btn ${winner==='HOME_TEAM'?'sel':''}" onclick="setResultPenaltyWinner(${m.id},'HOME_TEAM')">${htmlEscape(teams.t1)}</button>
+    <button class="penalty-btn ${winner==='AWAY_TEAM'?'sel':''}" onclick="setResultPenaltyWinner(${m.id},'AWAY_TEAM')">${htmlEscape(teams.t2)}</button>
+  </div>`;
+}
+
+function normalizeResultPenaltyWinner(mid) {
+  const match = MATCHES.find(m=>m.id===mid);
+  const res = S.results[mid];
+  if (!match || !resultNeedsPenaltyWinner(match, res)) {
+    if (S.matchMeta[mid]?.winner) S.matchMeta[mid] = { ...S.matchMeta[mid], winner:null };
+  }
+}
+
+function setResultPenaltyWinner(mid, winner) {
+  S.matchMeta[mid] = { ...(S.matchMeta[mid]||{}), winner };
+  save();
+  renderResultsContent();
+  const active = document.querySelector('.view.active')?.id;
+  if (active==='view-classement') renderClassement();
+  if (active==='view-tournoi') renderTournoi();
+}
+
 function updateResult(mid, key, val) {
   if (!S.results[mid]) S.results[mid]={s1:'',s2:''};
   S.results[mid][key] = val;
+  normalizeResultPenaltyWinner(mid);
   event.target.classList.toggle('filled', val!=='');
   save();
   const r = S.results[mid];

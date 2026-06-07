@@ -13,6 +13,7 @@ L'onglet **Matchs** suit le calendrier reel.
 - Chaque joueur pronostique le score des vrais matchs.
 - Les matchs de groupes peuvent etre remplis des le depart.
 - Pour les matchs de phase finale reels, il faut attendre que les vraies equipes soient connues.
+- Si un score de phase finale est nul, il faut aussi choisir le vainqueur aux tirs au but.
 - Les pronostics se verrouillent quand le match commence ou quand il est deja en cours/termine.
 
 Bareme des matchs :
@@ -31,6 +32,7 @@ L'onglet **Tournoi** simule le scenario complet d'un joueur.
 - Les scores des 32es calculent les equipes des 8es.
 - Les scores des 8es calculent les quarts.
 - Puis quarts -> demies -> finale -> champion.
+- En cas d'egalite en phase finale, le vainqueur aux tirs au but fait avancer l'equipe choisie.
 
 Autrement dit :
 

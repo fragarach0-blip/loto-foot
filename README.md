@@ -1,12 +1,12 @@
-# Loto Foot 2026
+# PRONO '26
 
 Application web familiale pour pronostiquer la Coupe du Monde 2026.
 
-Le site est volontairement simple à utiliser sur mobile : chaque joueur choisit son nom, saisit ses scores, puis suit le classement en temps réel.
+Simple sur mobile : chaque joueur choisit son nom, saisit ses scores, et suit le classement en temps réel.
 
 ## Site en ligne
 
-https://melodious-figolla-46b637.netlify.app
+https://fragarach0-blip.github.io/loto-foot/
 
 Tout le monde joue sur cette même URL. Les données sont synchronisées en temps réel avec Firebase Firestore.
 
@@ -16,13 +16,11 @@ Tout le monde joue sur cette même URL. Les données sont synchronisées en temp
 
 - 104 matchs : 72 matchs de groupes + 32 matchs de phase finale.
 - Pronostics par joueur.
-- Scores officiels saisis par l'administrateur ou synchronisés via football-data.org.
-- Classement en temps réel.
-- Podium et tableau détaillé.
-- Stats fun : taux de scores exacts, série en cours, spécialité groupes/finale.
-- Barème différent pour la phase finale.
-- Verrouillage automatique des pronostics après coup d'envoi.
-- Badge live quand l'API marque un match `IN_PLAY` ou `PAUSED`.
+- Scores officiels synchronisés automatiquement via football-data.org.
+- Cotes 1/N/2 synchronisées via The Odds API (une fois par jour).
+- Classement en temps réel avec podium et tableau détaillé.
+- Verrouillage automatique des pronostics après le coup d'envoi.
+- Badge EN DIRECT quand l'API marque un match `IN_PLAY` ou `PAUSED`.
 
 ### Joueurs
 
@@ -33,22 +31,23 @@ Tout le monde joue sur cette même URL. Les données sont synchronisées en temp
 ### Mobile / PWA
 
 - Application installable grâce à `manifest.json`, `sw.js` et `icon.svg`.
-- Fonctionne comme site statique hébergé sur Netlify.
-- Notifications web masquées pour le moment, le code reste présent mais aucune demande de permission n'est déclenchée.
+- Hébergée sur GitHub Pages (déploiements illimités).
+- Notifications web : code présent, aucune demande de permission déclenchée.
 
 ### Interface
 
-- Navigation compacte : Jouer, Score, TV, Admin.
-- Page Jouer avec actions rapides : Pronos, Score, Partager.
-- Mode TV/famille pour afficher le classement et les matchs à suivre sur un écran posé.
-- Partage rapide via Web Share API ou copie du lien.
-- Drapeaux affichés via images FlagCDN pour éviter les soucis de rendu emoji.
+- Navigation : Jouer, Score, TV.
+- Lien Admin discret en bas de la page d'accueil.
+- Mode TV/famille pour afficher le classement sur un grand écran.
+- Règlement affiché directement sur la page d'accueil.
+- Drapeaux via FlagCDN (pas d'emoji).
 
 ### API externes
 
-- football-data.org : synchronisation des statuts et résultats.
-- The Odds API : support optionnel des cotes 1/N/2 si une clé est configurée.
+- football-data.org : résultats et statuts, token en paramètre URL.
+- The Odds API : cotes 1/N/2, sync automatique 1×/jour.
 - FlagCDN : images de drapeaux.
+- Firebase Firestore : état partagé en temps réel.
 
 ## Règles du jeu
 
@@ -56,8 +55,6 @@ Tout le monde joue sur cette même URL. Les données sont synchronisées en temp
 |---|---:|---:|---:|
 | Groupes | 3 pts | 1 pt | 0 pt |
 | Phase finale | 5 pts | 2 pts | 0 pt |
-
-Un bon résultat signifie que le joueur a trouvé le bon sens du match : victoire équipe 1, nul ou victoire équipe 2.
 
 ## Comment jouer
 
@@ -72,121 +69,28 @@ Si un joueur a un PIN, l'app le demande avant d'ouvrir ses pronostics.
 
 ## Admin
 
-Le code admin par défaut est :
+Le code admin par défaut est `1234`.
 
-```text
-1234
-```
+Accessible via le lien discret en bas de la page d'accueil. Permet :
 
-L'onglet `Admin` permet :
-
-- de saisir les résultats manuellement ;
 - de synchroniser les résultats via football-data.org ;
-- de synchroniser les cotes si une clé The Odds API est configurée ;
+- de synchroniser les cotes via The Odds API ;
+- de saisir les résultats manuellement ;
 - de filtrer par groupe ou phase finale.
 
 ## Données Firestore
 
-Tout l'état partagé est stocké dans un seul document :
-
-```text
-Collection: state
-Document: main
-```
-
-Structure principale :
+Tout l'état est dans un seul document `state/main` :
 
 ```js
 {
-  players: [
-    { id, name, color, photo, pin }
-  ],
-  preds: {
-    [playerId]: {
-      [matchId]: { s1, s2 }
-    }
-  },
-  results: {
-    [matchId]: { s1, s2 }
-  },
-  matchMeta: {
-    [matchId]: {
-      status,
-      utcDate,
-      winner,
-      odds,
-      t1,
-      t2
-    }
-  },
+  players: [{ id, name, color, photo, pin }],
+  preds: { [playerId]: { [matchId]: { s1, s2 } } },
+  results: { [matchId]: { s1, s2 } },
+  matchMeta: { [matchId]: { status, utcDate, winner, odds, t1, t2 } },
   adminCode: "1234"
 }
 ```
-
-### Champs importants
-
-- `players` : joueurs, couleur, photo base64 compressée, PIN optionnel.
-- `preds` : pronostics par joueur et par match.
-- `results` : scores officiels.
-- `matchMeta` : métadonnées API, statut live, dates exactes, vainqueur, cotes et noms d'équipes résolus.
-- `adminCode` : code admin.
-
-## Synchronisation temps réel
-
-Au chargement :
-
-1. `load()` lit `state/main`.
-2. `startSync()` ouvre un `onSnapshot`.
-3. Chaque écriture appelle `save()`.
-4. Les autres appareils reçoivent la mise à jour automatiquement.
-
-La variable `saving` évite qu'un appareil se re-rende immédiatement pendant sa propre saisie.
-
-## Verrouillage des pronostics
-
-Un prono est verrouillé si :
-
-- l'heure de coup d'envoi est passée ;
-- ou le statut API est `IN_PLAY`, `PAUSED`, `LIVE`, `FINISHED` ou `AWARDED`.
-
-L'heure vient de `matchMeta.utcDate` quand l'API l'a fournie. Sinon l'app utilise la date locale du calendrier avec une heure par défaut.
-
-## Phase finale
-
-Les matchs 73 à 104 couvrent :
-
-- 16 matchs de 32es de finale ;
-- 8 huitièmes ;
-- 4 quarts ;
-- 2 demies ;
-- petite finale ;
-- finale.
-
-L'app peut remplacer automatiquement les placeholders :
-
-- `1er A`, `2e B`, etc. avec le classement de groupe ;
-- `3e A/B/C/...` avec les meilleurs troisièmes quand ils sont déductibles ;
-- `Vainqueur M73`, `Perdant M101`, etc. avec les résultats des matchs précédents.
-
-En cas de nul en phase finale, l'app peut utiliser `matchMeta.winner` si l'API indique le vainqueur officiel.
-
-## Cotes
-
-Le support des cotes est optionnel.
-
-L'app utilise The Odds API sur le marché `h2h` :
-
-- équipe 1 ;
-- nul ;
-- équipe 2.
-
-La constante HTML reste vide localement :
-
-```js
-const ODDS_API_KEY = '';
-```
-
-Au déploiement, `deploy-netlify.py` injecte la valeur de `ODDS_API_TOKEN` depuis `.env.local` si elle existe.
 
 ## Fichiers du projet
 
@@ -194,92 +98,59 @@ Au déploiement, `deploy-netlify.py` injecte la valeur de `ODDS_API_TOKEN` depui
 loto-foot/
 ├── loto-foot-app.html   # App complète HTML/CSS/JS
 ├── manifest.json        # Manifest PWA
-├── sw.js                # Service worker PWA/cache
+├── sw.js                # Service worker (pass-through, pas de cache)
 ├── icon.svg             # Icône PWA
-├── deploy-netlify.py    # Déploiement Netlify via API
+├── deploy-github.py     # Déploiement GitHub Pages
+├── deploy-netlify.py    # Déploiement Netlify (backup)
 ├── dev-server.py        # Serveur local + proxy football-data
-├── A REMPLIR.xlsx       # Ancien fichier Excel hors-ligne
 ├── README.md            # Documentation
 └── .env.local           # Tokens locaux, ignoré par git
 ```
 
 ## Variables locales
 
-Le fichier `.env.local` est volontairement ignoré par git.
-
-Format attendu :
-
 ```env
 NETLIFY_TOKEN=...
-FOOTBALL_DATA_TOKEN=...
-ODDS_API_TOKEN=...
+FOOTBALL_DATA_TOKEN=537561c0fa7943d69a67c7ad53c671f3
+ODDS_API_TOKEN=80941ab267df6c39865e65451ebb387f
 ```
 
-Notes :
-
-- `NETLIFY_TOKEN` sert au script de déploiement.
-- `FOOTBALL_DATA_TOKEN` est documenté localement, mais la clé actuellement utilisée est encore dans le HTML pour les appels navigateur.
-- `ODDS_API_TOKEN` est injecté dans le HTML déployé si configuré.
-
-## Déploiement
-
-Le déploiement publie plusieurs fichiers :
-
-- `index.html` généré depuis `loto-foot-app.html` ;
-- `manifest.json` ;
-- `sw.js` ;
-- `icon.svg`.
-
-Commande :
+## Déploiement GitHub Pages
 
 ```powershell
 Set-Location "C:\Users\Charlotte\Desktop\loto foot"
-& "C:\Users\Charlotte\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" deploy-netlify.py
+& "C:\Users\Charlotte\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" deploy-github.py
 ```
 
-Le script :
-
-1. lit `.env.local` ;
-2. calcule les SHA1 des fichiers ;
-3. crée un déploiement Netlify avec la Files API ;
-4. uploade uniquement les fichiers demandés par Netlify ;
-5. affiche l'URL publiée.
+Le script copie `loto-foot-app.html` → `index.html`, adapte le manifest, et force-push vers la branche `gh-pages`.
 
 ## Test local
-
-Le plus simple :
 
 ```powershell
 Set-Location "C:\Users\Charlotte\Desktop\loto foot"
 & "C:\Users\Charlotte\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" dev-server.py
 ```
 
-Puis ouvrir :
-
-```text
-http://localhost:8082/loto-foot-app.html
-```
+Puis ouvrir : http://localhost:8082/loto-foot-app.html
 
 `dev-server.py` sert les fichiers et proxifie les appels football-data.org pour éviter les problèmes CORS en local.
 
-## Vérification rapide avant déploiement
+## Quotas API
 
-Vérifier que le JavaScript embarqué est syntaxiquement valide :
-
-```powershell
-& "C:\Users\Charlotte\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe" -e "const fs=require('fs'); const html=fs.readFileSync('loto-foot-app.html','utf8'); const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]); for (const s of scripts) new Function(s); console.log('JS syntax OK')"
-```
+| Service | Plan | Limite |
+|---|---|---|
+| football-data.org | Gratuit | 10 req/min |
+| The Odds API | Gratuit | 500 req/mois (sync 1×/jour = ~30 req/mois) |
+| Firebase Firestore | Spark (gratuit) | 50k lectures/jour · 20k écritures/jour |
+| FlagCDN | Gratuit | Illimité |
+| GitHub Pages | Gratuit | Déploiements illimités |
 
 ## Sécurité
 
-Points à connaître :
-
-- Firestore semble fonctionner en mode lecture/écriture publique. C'est acceptable pour un usage familial, mais pas pour une app publique large.
-- Le code admin `1234` n'est pas une vraie sécurité serveur. Il protège surtout contre les modifications accidentelles.
-- Les tokens API ne doivent pas être commités.
+- Firestore en lecture/écriture publique — acceptable pour usage familial.
+- Le code admin `1234` protège contre les modifications accidentelles, pas contre un utilisateur malveillant.
+- Les tokens API sont visibles côté navigateur par nature.
 - `.env.local` est ignoré par git.
-- Le token Netlify déjà collé dans une conversation doit idéalement être révoqué et remplacé.
-- Les clés utilisées côté navigateur sont visibles par nature. Pour une sécurité plus forte, il faudrait déplacer les appels API derrière une fonction serveur.
 
 ## Calendrier des groupes
 
@@ -297,12 +168,3 @@ Points à connaître :
 | J | Argentine, Algérie, Autriche, Jordanie |
 | K | Portugal, RD Congo, Ouzbékistan, Colombie |
 | L | Angleterre, Croatie, Ghana, Panama |
-
-## Roadmap possible
-
-- Ajouter une vraie authentification Firebase.
-- Déplacer les clés API dans une fonction Netlify.
-- Ajouter export PDF/Excel.
-- Ajouter une fiche joueur détaillée.
-- Ajouter un historique des modifications.
-- Réactiver les notifications avec une stratégie mobile fiable.

@@ -828,6 +828,99 @@ nav button.active {
   .team .tname { font-size: .66rem; }
   .hero-title { font-size: 4.8rem; }
 }
+
+/* ── SCORE STEPPER (+/-) ── */
+.score-area { display:flex; flex-direction:column; align-items:center; gap:3px; flex-shrink:0; }
+.score-steppers-top, .score-steppers-bot { display:flex; align-items:center; gap:6px; justify-content:center; }
+.score-area-gap { width:20px; flex-shrink:0; }
+.score-row { display:flex; align-items:center; gap:4px; }
+.score-step-btn {
+  width:34px; height:26px;
+  border:1.5px solid var(--border);
+  background:var(--paper);
+  border-radius:5px;
+  cursor:pointer;
+  font-size:.9rem;
+  color:var(--ink-2);
+  display:flex; align-items:center; justify-content:center;
+  transition:background .1s;
+  user-select:none; -webkit-user-select:none;
+  font-family:'DM Mono',monospace;
+  line-height:1;
+}
+.score-step-btn:hover:not(:disabled) { background:var(--border); color:var(--ink); }
+.score-step-btn:active:not(:disabled) { background:var(--border-2); }
+.score-step-btn:disabled { opacity:.22; cursor:not-allowed; }
+
+/* ── PLAYER CARDS ── */
+.player-cards-grid {
+  display:flex; flex-wrap:wrap; gap:8px;
+  padding:14px 16px;
+  background:var(--white);
+  border-bottom:1px solid var(--border);
+}
+.player-card-btn {
+  display:flex; flex-direction:column; align-items:center; gap:5px;
+  padding:10px 12px 9px;
+  background:var(--paper);
+  border:2px solid var(--border);
+  border-radius:8px;
+  cursor:pointer;
+  transition:border-color .12s, background .12s;
+  min-width:60px;
+  font-family:'Space Grotesk',sans-serif;
+}
+.player-card-btn:hover { border-color:var(--ink-2); }
+.player-card-btn.sel { border-color:var(--red); background:var(--red-bg); }
+.player-card-btn-name { font-size:.74rem; font-weight:700; color:var(--ink); max-width:64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* ── PIN MODAL KEYPAD ── */
+.pin-display { text-align:center; padding:14px 0 4px; }
+.pin-dots { display:flex; justify-content:center; gap:12px; min-height:18px; }
+.pin-dot-el { width:14px; height:14px; border-radius:50%; border:2px solid var(--border-2); background:transparent; transition:background .15s,border-color .15s; }
+.pin-dot-el.filled { background:var(--ink); border-color:var(--ink); }
+.pin-keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:0 4px; margin-top:12px; }
+.pin-key { height:56px; border:1.5px solid var(--border); background:var(--paper); border-radius:8px; font-family:'DM Mono',monospace; font-size:1.3rem; font-weight:500; color:var(--ink); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .1s; user-select:none; -webkit-user-select:none; }
+.pin-key:active { background:var(--border); }
+.pin-key.pin-del { font-size:1rem; background:var(--red-bg); border-color:var(--red-border); color:var(--red); }
+.pin-key.pin-ok { background:var(--ink); color:#fff; border-color:var(--ink); font-size:.88rem; letter-spacing:.05em; font-family:'Space Grotesk',sans-serif; font-weight:700; }
+.pin-key.pin-empty { border:none; background:transparent; cursor:default; pointer-events:none; }
+.pin-error { text-align:center; color:var(--red); font-family:'DM Mono',monospace; font-size:.78rem; margin-top:6px; min-height:18px; }
+
+/* ── WELCOME OVERLAY ── */
+.welcome-overlay {
+  position:fixed; inset:0; background:var(--ink); z-index:500;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-end;
+}
+@keyframes wFadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+.welcome-sheet {
+  background:var(--white); border-top:4px solid var(--red);
+  width:100%; max-width:520px; padding:28px 24px 48px;
+  animation:wFadeIn .3s ease-out;
+}
+.welcome-big-title { font-family:'Bebas Neue',sans-serif; font-size:2.8rem; line-height:.9; color:#fff; letter-spacing:-.01em; text-align:center; margin-bottom:6px; }
+.welcome-big-title span { color:var(--red); }
+.welcome-big-sub { font-family:'DM Mono',monospace; font-size:.65rem; color:rgba(255,255,255,.35); letter-spacing:.18em; text-transform:uppercase; text-align:center; padding:20px 0 0; flex:1; display:flex; align-items:center; justify-content:center; }
+.welcome-steps { display:flex; flex-direction:column; gap:14px; margin-bottom:24px; }
+.welcome-step { display:flex; align-items:flex-start; gap:14px; }
+.welcome-step-num { width:28px; height:28px; border-radius:50%; background:var(--red); color:#fff; font-family:'DM Mono',monospace; font-size:.85rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.welcome-step-body strong { display:block; font-size:.92rem; font-weight:700; color:var(--ink); margin-bottom:2px; }
+.welcome-step-body span { font-size:.78rem; color:var(--ink-3); font-family:'DM Mono',monospace; }
+
+/* ── NEXT MATCH CARD ── */
+.next-match-card { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0 4px; }
+.nmc-team { display:flex; align-items:center; gap:5px; font-size:.82rem; font-weight:700; color:var(--ink); }
+.nmc-vs { font-family:'DM Mono',monospace; font-size:.72rem; color:var(--ink-3); }
+.nmc-date { font-family:'DM Mono',monospace; font-size:.66rem; color:var(--ink-3); text-align:center; margin-top:4px; text-transform:capitalize; }
+
+/* ── NAV ICONS ── */
+nav button { gap:2px; }
+nav button svg { display:block; width:18px; height:18px; opacity:.45; }
+nav button.active svg { opacity:1; }
+nav button span { font-size:.8rem; }
+
+/* ── HELPER CARD ── */
+.helper-card { background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:10px 12px; margin-top:8px; font-size:.78rem; color:#92400e; line-height:1.5; font-family:'DM Mono',monospace; }
 </style>
 </head>
 <body>
@@ -835,10 +928,22 @@ nav button.active {
 <header></header>
 
 <nav>
-  <button class="active" id="nav-home" onclick="showView('home')">Jouer</button>
-  <button id="nav-pronos" onclick="showView('pronos')" style="display:none">Pronos</button>
-  <button id="nav-classement" onclick="showView('classement')">Score</button>
-  <button id="nav-famille" onclick="showView('famille')">TV</button>
+  <button class="active" id="nav-home" onclick="showView('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+    <span>Accueil</span>
+  </button>
+  <button id="nav-pronos" onclick="showView('pronos')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    <span>Pronos</span>
+  </button>
+  <button id="nav-classement" onclick="showView('classement')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21H5a2 2 0 01-2-2v-5"/><path d="M21 21h-3a2 2 0 01-2-2v-5"/><rect x="7" y="13" width="10" height="8" rx="1"/><path d="M12 3l2 4H6l2-4h4z"/><path d="M12 7v6"/></svg>
+    <span>Score</span>
+  </button>
+  <button id="nav-famille" onclick="showView('famille')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    <span>Live</span>
+  </button>
 </nav>
 
 <!-- ── HOME ── -->
@@ -860,17 +965,27 @@ nav button.active {
   </div>
 
   <div class="home-section">
-    <div class="section-eyebrow">Règlement</div>
+    <div class="section-eyebrow">Comment ça marche</div>
     <div class="rule-rows">
       <div class="rule-row">
-        <span class="rule-row-label">Phase de groupes</span>
-        <span class="rule-pts">3 pts<span class="rule-sep-inline">/</span>1 pt</span>
+        <span class="rule-row-label">Score exact (ex: tu dis 2-1, c'est 2-1)</span>
+        <span class="rule-pts" style="color:var(--green)">+3 pts</span>
       </div>
       <div class="rule-row">
-        <span class="rule-row-label">Phase finale</span>
-        <span class="rule-pts">5 pts<span class="rule-sep-inline">/</span>2 pts</span>
+        <span class="rule-row-label">Bon résultat (ex: tu dis 2-1, c'est 3-0)</span>
+        <span class="rule-pts" style="color:var(--amber)">+1 pt</span>
+      </div>
+      <div class="rule-row">
+        <span class="rule-row-label">Mauvais pronostic</span>
+        <span class="rule-pts" style="color:var(--red)">0 pt</span>
       </div>
     </div>
+    <div class="helper-card">En phase finale : <strong>5 pts</strong> pour le score exact, <strong>2 pts</strong> pour le bon résultat.</div>
+  </div>
+
+  <div class="home-section" id="next-match-section" style="display:none">
+    <div class="section-eyebrow">Prochain match</div>
+    <div id="next-match-content"></div>
   </div>
 
   <div class="home-section">
@@ -887,9 +1002,7 @@ nav button.active {
 
 <!-- ── PRONOS ── -->
 <div id="view-pronos" class="view">
-  <select id="player-sel" class="form-select" onchange="loadPronos()">
-    <option value="">Joueur...</option>
-  </select>
+  <div id="player-cards-grid" class="player-cards-grid"></div>
   <div id="filter-tabs-wrap" style="display:none">
     <div class="filter-tabs" id="filter-tabs">
       <div class="filter-tab active" onclick="filterGroup('all',this)">Tous</div>
@@ -1005,6 +1118,68 @@ nav button.active {
     <div id="del-btn-wrap" style="display:none;margin-top:8px">
       <button class="btn btn-danger btn-block" onclick="deletePlayer()">Supprimer ce joueur</button>
     </div>
+  </div>
+</div>
+
+<!-- ── PIN MODAL ── -->
+<div class="modal-overlay" id="pin-modal" onclick="if(event.target===this)closePinModal()">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <h3 id="pin-modal-title">Entrer le PIN</h3>
+    <div class="pin-display">
+      <div id="pin-dots-display" class="pin-dots"></div>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinKeyPress('1')">1</button>
+      <button class="pin-key" onclick="pinKeyPress('2')">2</button>
+      <button class="pin-key" onclick="pinKeyPress('3')">3</button>
+      <button class="pin-key" onclick="pinKeyPress('4')">4</button>
+      <button class="pin-key" onclick="pinKeyPress('5')">5</button>
+      <button class="pin-key" onclick="pinKeyPress('6')">6</button>
+      <button class="pin-key" onclick="pinKeyPress('7')">7</button>
+      <button class="pin-key" onclick="pinKeyPress('8')">8</button>
+      <button class="pin-key" onclick="pinKeyPress('9')">9</button>
+      <button class="pin-key pin-del" onclick="pinKeyDelete()">⌫</button>
+      <button class="pin-key" onclick="pinKeyPress('0')">0</button>
+      <button class="pin-key pin-ok" onclick="pinKeyOk()">OK</button>
+    </div>
+    <button class="btn btn-outline btn-block" style="margin-top:12px" onclick="closePinModal()">Annuler</button>
+  </div>
+</div>
+
+<!-- ── WELCOME OVERLAY ── -->
+<div id="welcome-overlay" class="welcome-overlay" style="display:none">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;gap:8px">
+    <div class="welcome-big-title">PRONO<br><span>'26</span></div>
+    <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:rgba(255,255,255,.35);letter-spacing:.18em;text-transform:uppercase">FIFA WORLD CUP 2026</div>
+  </div>
+  <div class="welcome-sheet">
+    <div class="welcome-steps">
+      <div class="welcome-step">
+        <div class="welcome-step-num">1</div>
+        <div class="welcome-step-body">
+          <strong>Ajoute ton prénom</strong>
+          <span>Pour créer ton profil de joueur</span>
+        </div>
+      </div>
+      <div class="welcome-step">
+        <div class="welcome-step-num">2</div>
+        <div class="welcome-step-body">
+          <strong>Pronostique les scores</strong>
+          <span>Avant le coup d'envoi de chaque match</span>
+        </div>
+      </div>
+      <div class="welcome-step">
+        <div class="welcome-step-num">3</div>
+        <div class="welcome-step-body">
+          <strong>Suis le classement familial</strong>
+          <span>3 pts si score exact · 1 pt si bon résultat</span>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="startOnboarding()" style="font-size:.95rem;padding:14px">C'est parti !</button>
+    <button class="btn btn-outline btn-block" onclick="dismissWelcome()" style="margin-top:8px;font-size:.8rem">J'ai déjà un compte</button>
   </div>
 </div>
 
@@ -1177,6 +1352,11 @@ let selPhoto = null;
 let activeGroupFilter = 'all';
 let activeResFilter = 'all';
 let unlockedPlayers = {};
+let currentPid = null;
+// PIN modal state
+let pinModalPlayerId = null;
+let pinModalCallback = null;
+let pinCurrentValue = '';
 
 async function load() {
   const snap = await stateRef.get();
@@ -1207,9 +1387,7 @@ function startSync() {
     const active = document.querySelector('.view.active')?.id;
     if (active === 'view-home') renderHome();
     if (active === 'view-pronos') {
-      renderPronosSelect();
-      const pid = document.getElementById('player-sel')?.value;
-      if (pid) renderPronosMatches(pid);
+      renderPlayerCards();
     }
     if (active === 'view-classement') renderClassement();
     if (active === 'view-famille') renderFamilyMode();
@@ -1460,11 +1638,10 @@ function showView(name) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
-  const navName = name === 'pronos' ? 'home' : name;
-  const navEl = document.getElementById('nav-'+navName);
+  const navEl = document.getElementById('nav-'+name);
   if (navEl) navEl.classList.add('active');
   if (name==='home') renderHome();
-  if (name==='pronos') renderPronosSelect();
+  if (name==='pronos') renderPlayerCards();
   if (name==='resultats') renderResultats();
   if (name==='classement') renderClassement();
   if (name==='famille') renderFamilyMode();
@@ -1488,24 +1665,47 @@ function renderHome() {
   document.getElementById('player-count').textContent = S.players.length ? `· ${S.players.length}` : '';
   if (!S.players.length) {
     list.innerHTML = `<div class="empty-state" style="padding:24px 0">
-      <div class="empty-title">Aucun joueur</div>
-      <div class="empty-desc">Ajoute un joueur</div>
+      <div class="empty-title">Aucun joueur pour l'instant</div>
+      <div class="empty-desc">Appuie sur "+ Ajouter" pour commencer</div>
     </div>`;
-    return;
+  } else {
+    const sorted = [...S.players].map(p=>({...p,...playerStats(p.id)})).sort((a,b)=>b.total-a.total);
+    list.innerHTML = sorted.map(p => {
+      const pct = Math.round(p.filled/MATCHES.length*100);
+      const missing = MATCHES.length - p.filled;
+      const hint = missing > 0 ? `<span style="color:var(--red)">${missing} à remplir</span>` : `<span style="color:var(--green)">Complet ✓</span>`;
+      return `<div class="player-row" onclick="editPlayer('${p.id}')">
+        ${avatarHTML(p, 38, 0)}
+        <div class="player-info">
+          <div class="player-name">${p.name}</div>
+          <div class="player-meta">${p.filled}/${MATCHES.length} pronos · ${hint}</div>
+          <div class="player-progress"><div class="player-progress-fill" style="background:${p.color};width:${pct}%"></div></div>
+        </div>
+        <div class="player-score">${p.total} pts</div>
+      </div>`;
+    }).join('');
   }
-  const sorted = [...S.players].map(p=>({...p,...playerStats(p.id)})).sort((a,b)=>b.total-a.total);
-  list.innerHTML = sorted.map(p => {
-    const pct = Math.round(p.filled/MATCHES.length*100);
-    return `<div class="player-row" onclick="editPlayer('${p.id}')">
-      ${avatarHTML(p, 38, 0)}
-      <div class="player-info">
-        <div class="player-name">${p.name}</div>
-        <div class="player-meta">${p.filled}/${MATCHES.length}</div>
-        <div class="player-progress"><div class="player-progress-fill" style="background:${p.color};width:${pct}%"></div></div>
-      </div>
-      <div class="player-score">${p.total} pts</div>
-    </div>`;
-  }).join('');
+  renderNextMatch();
+}
+
+function renderNextMatch() {
+  const sec = document.getElementById('next-match-section');
+  const content = document.getElementById('next-match-content');
+  if (!sec || !content) return;
+  const now = new Date();
+  const upcoming = MATCHES
+    .filter(m=>!resultForMatch(m.id) && matchKickoff(m) > now)
+    .sort((a,b)=>matchKickoff(a)-matchKickoff(b))[0];
+  if (!upcoming) { sec.style.display='none'; return; }
+  const teams = matchTeams(upcoming);
+  const dateStr = matchKickoff(upcoming).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+  sec.style.display = 'block';
+  content.innerHTML = `<div class="next-match-card">
+    <div class="nmc-team">${flagHTML(teams.t1)}<span>${teams.t1}</span></div>
+    <span class="nmc-vs">vs</span>
+    <div class="nmc-team"><span>${teams.t2}</span>${flagHTML(teams.t2)}</div>
+  </div>
+  <div class="nmc-date">${dateStr}</div>`;
 }
 
 // ── MODAL ──
@@ -1578,44 +1778,63 @@ function deletePlayer() {
 function closeModal() { document.getElementById('player-modal').classList.remove('open'); }
 
 // ── PRONOS ──
-function renderPronosSelect() {
-  const sel = document.getElementById('player-sel');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">Joueur...</option>' +
-    S.players.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
-  if (cur && S.players.find(p=>p.id===cur)) sel.value=cur;
-  document.getElementById('filter-tabs-wrap').style.display = sel.value ? 'block':'none';
-  if (sel.value) ensurePlayerUnlocked(sel.value) && renderPronosMatches(sel.value);
-}
-
-function loadPronos() {
-  const pid = document.getElementById('player-sel').value;
-  document.getElementById('filter-tabs-wrap').style.display = pid ? 'block':'none';
-  if (!pid) {
+function renderPlayerCards() {
+  const grid = document.getElementById('player-cards-grid');
+  if (!grid) return;
+  if (!S.players.length) {
+    grid.innerHTML = '';
+    document.getElementById('filter-tabs-wrap').style.display = 'none';
     document.getElementById('pronos-content').innerHTML = `<div class="empty-state">
-      <div class="empty-title">Choisis ton nom</div>
-      <div class="empty-desc">Scores à remplir</div>
+      <div class="empty-title">Aucun joueur</div>
+      <div class="empty-desc">Ajoute d'abord un joueur depuis l'onglet Accueil</div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="showView('home');setTimeout(openAddPlayer,300)">+ Ajouter un joueur</button>
     </div>`;
     return;
   }
-  if (!ensurePlayerUnlocked(pid)) return;
+  // Auto-select unique player with no PIN
+  if (S.players.length === 1 && !S.players[0].pin && !currentPid) {
+    currentPid = S.players[0].id;
+  }
+  grid.innerHTML = S.players.map(p => `
+    <button class="player-card-btn ${currentPid===p.id?'sel':''}" onclick="selectPid('${p.id}')">
+      ${avatarHTML(p, 44, 22)}
+      <span class="player-card-btn-name">${p.name}</span>
+    </button>
+  `).join('');
+  if (currentPid) {
+    document.getElementById('filter-tabs-wrap').style.display = 'block';
+    renderPronosMatches(currentPid);
+  } else {
+    document.getElementById('filter-tabs-wrap').style.display = 'none';
+    document.getElementById('pronos-content').innerHTML = `<div class="empty-state" style="padding:28px 20px">
+      <div class="empty-icon">👆</div>
+      <div class="empty-title">C'est à toi !</div>
+      <div class="empty-desc">Sélectionne ton prénom ci-dessus pour remplir tes pronostics</div>
+    </div>`;
+  }
+}
+
+function selectPid(pid) {
+  const player = S.players.find(p=>p.id===pid);
+  if (!player) return;
+  if (player.pin && !unlockedPlayers[pid]) {
+    openPinModal(player, () => {
+      currentPid = pid;
+      activeGroupFilter = 'all';
+      document.querySelectorAll('#filter-tabs .filter-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+      renderPlayerCards();
+    });
+    return;
+  }
+  currentPid = pid;
   activeGroupFilter = 'all';
   document.querySelectorAll('#filter-tabs .filter-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
-  renderPronosMatches(pid);
+  renderPlayerCards();
 }
 
 function ensurePlayerUnlocked(pid) {
   const player = S.players.find(p=>p.id===pid);
   if (!player || !player.pin || unlockedPlayers[pid]) return true;
-  const entered = prompt(`PIN de ${player.name}`);
-  if (entered === player.pin) { unlockedPlayers[pid] = true; return true; }
-  document.getElementById('player-sel').value = '';
-  document.getElementById('filter-tabs-wrap').style.display = 'none';
-  document.getElementById('pronos-content').innerHTML = `<div class="empty-state">
-    <div class="empty-title">PIN incorrect</div>
-    <div class="empty-desc">Réessaie</div>
-  </div>`;
-  toast('PIN incorrect');
   return false;
 }
 
@@ -1623,8 +1842,67 @@ function filterGroup(grp, el) {
   activeGroupFilter = grp;
   document.querySelectorAll('#filter-tabs .filter-tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
-  const pid = document.getElementById('player-sel').value;
-  if (pid) renderPronosMatches(pid);
+  if (currentPid) renderPronosMatches(currentPid);
+}
+
+// ── PIN MODAL ──
+function openPinModal(player, onSuccess) {
+  pinModalPlayerId = player.id;
+  pinModalCallback = onSuccess;
+  pinCurrentValue = '';
+  document.getElementById('pin-modal-title').textContent = `PIN de ${player.name}`;
+  document.getElementById('pin-error').textContent = '';
+  renderPinDots();
+  document.getElementById('pin-modal').classList.add('open');
+}
+function closePinModal() {
+  document.getElementById('pin-modal').classList.remove('open');
+  pinCurrentValue = ''; pinModalPlayerId = null; pinModalCallback = null;
+}
+function pinKeyPress(d) {
+  if (pinCurrentValue.length >= 8) return;
+  pinCurrentValue += d;
+  document.getElementById('pin-error').textContent = '';
+  renderPinDots();
+}
+function pinKeyDelete() {
+  pinCurrentValue = pinCurrentValue.slice(0,-1);
+  document.getElementById('pin-error').textContent = '';
+  renderPinDots();
+}
+function renderPinDots() {
+  const len = Math.max(4, pinCurrentValue.length);
+  document.getElementById('pin-dots-display').innerHTML =
+    Array.from({length:len},(_,i)=>`<div class="pin-dot-el ${i<pinCurrentValue.length?'filled':''}"></div>`).join('');
+}
+function pinKeyOk() {
+  const player = S.players.find(p=>p.id===pinModalPlayerId);
+  if (!player) return;
+  if (pinCurrentValue === player.pin) {
+    unlockedPlayers[pinModalPlayerId] = true;
+    const cb = pinModalCallback;
+    closePinModal();
+    if (cb) cb();
+  } else {
+    document.getElementById('pin-error').textContent = 'PIN incorrect, réessaie';
+    pinCurrentValue = ''; renderPinDots();
+  }
+}
+
+// ── WELCOME ──
+function checkWelcome() {
+  if (!localStorage.getItem('lotoFootWelcomeSeen') && S.players.length === 0) {
+    document.getElementById('welcome-overlay').style.display = 'flex';
+  }
+}
+function startOnboarding() {
+  localStorage.setItem('lotoFootWelcomeSeen','1');
+  document.getElementById('welcome-overlay').style.display = 'none';
+  openAddPlayer();
+}
+function dismissWelcome() {
+  localStorage.setItem('lotoFootWelcomeSeen','1');
+  document.getElementById('welcome-overlay').style.display = 'none';
 }
 
 function matchFilter(list, filter) {
@@ -1664,23 +1942,37 @@ function renderPronosMatches(pid) {
       const locked = isPredictionLocked(m);
       const dateStr = matchKickoff(m).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
       const badge = matchBadge(m, pt);
+      const dis = locked ? 'disabled' : '';
+      const v1 = pr.s1!==''&&pr.s1!=null ? pr.s1 : '';
+      const v2 = pr.s2!==''&&pr.s2!=null ? pr.s2 : '';
       html += `<div class="match-item">
         <div class="match-watermark">${m.id}</div>
         <div class="match-meta"><span>${dateStr}</span>${badge}</div>
         <div class="match-row">
           <div class="team">${teamHTML(teams.t1)}</div>
-          <div class="score-wrap">
-            <input type="number" class="score-input ${pr.s1!==''&&pr.s1!=null?'filled':''}" min="0" max="20"
-              value="${pr.s1!==''&&pr.s1!=null?pr.s1:''}"
-              oninput="updatePred('${pid}',${m.id},'s1',this.value)" placeholder="–" ${locked?'disabled':''}>
-            <span class="score-sep">–</span>
-            <input type="number" class="score-input ${pr.s2!==''&&pr.s2!=null?'filled':''}" min="0" max="20"
-              value="${pr.s2!==''&&pr.s2!=null?pr.s2:''}"
-              oninput="updatePred('${pid}',${m.id},'s2',this.value)" placeholder="–" ${locked?'disabled':''}>
+          <div class="score-area">
+            <div class="score-steppers-top">
+              <button class="score-step-btn" onclick="adjustPred('${pid}',${m.id},'s1',1)" ${dis}>+</button>
+              <span class="score-area-gap"></span>
+              <button class="score-step-btn" onclick="adjustPred('${pid}',${m.id},'s2',1)" ${dis}>+</button>
+            </div>
+            <div class="score-row">
+              <input type="number" class="score-input ${v1!==''?'filled':''}" id="si-${m.id}-s1" min="0" max="20"
+                value="${v1}" oninput="updatePred('${pid}',${m.id},'s1',this.value)" placeholder="?" ${dis}>
+              <span class="score-sep">–</span>
+              <input type="number" class="score-input ${v2!==''?'filled':''}" id="si-${m.id}-s2" min="0" max="20"
+                value="${v2}" oninput="updatePred('${pid}',${m.id},'s2',this.value)" placeholder="?" ${dis}>
+            </div>
+            <div class="score-steppers-bot">
+              <button class="score-step-btn" onclick="adjustPred('${pid}',${m.id},'s1',-1)" ${dis}>−</button>
+              <span class="score-area-gap"></span>
+              <button class="score-step-btn" onclick="adjustPred('${pid}',${m.id},'s2',-1)" ${dis}>−</button>
+            </div>
           </div>
           <div class="team">${teamHTML(teams.t2)}</div>
         </div>
-        ${res&&res.s1!==''&&res.s1!=null?`<div class="official-score"><strong>${res.s1} – ${res.s2}</strong></div>`:''}
+        ${locked&&!res?`<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Match commencé — pronostic verrouillé</div>`:''}
+        ${res&&res.s1!==''&&res.s1!=null?`<div class="official-score">Résultat officiel : <strong>${res.s1} – ${res.s2}</strong></div>`:''}
         ${oddsHTML(m)}
       </div>`;
     }
@@ -1696,6 +1988,25 @@ function updatePred(pid, mid, key, val) {
   S.preds[pid][mid][key] = val;
   event.target.classList.toggle('filled', val!=='');
   save();
+  updateProgBar(pid);
+}
+
+function adjustPred(pid, mid, key, delta) {
+  const match = MATCHES.find(m=>m.id===mid);
+  if (match && isPredictionLocked(match)) { toast('Match verrouillé'); return; }
+  if (!S.preds[pid]) S.preds[pid]={};
+  if (!S.preds[pid][mid]) S.preds[pid][mid]={s1:'',s2:''};
+  const cur = S.preds[pid][mid][key];
+  const curVal = (cur===''||cur==null) ? 0 : +cur;
+  const newVal = Math.max(0, curVal + delta);
+  S.preds[pid][mid][key] = String(newVal);
+  const el = document.getElementById(`si-${mid}-${key}`);
+  if (el) { el.value = newVal; el.classList.add('filled'); }
+  save();
+  updateProgBar(pid);
+}
+
+function updateProgBar(pid) {
   const st = playerStats(pid);
   const pct = Math.round(st.filled/MATCHES.length*100);
   const f = document.getElementById('prog-fill');
@@ -2044,7 +2355,7 @@ async function syncOddsFromAPI(manual = false) {
       const active = document.querySelector('.view.active')?.id;
       if (active==='view-resultats' && S.adminOpen) renderResultsContent();
       if (active==='view-famille') renderFamilyMode();
-      if (active==='view-pronos') { const pid=document.getElementById('player-sel')?.value; if(pid) renderPronosMatches(pid); }
+      if (active==='view-pronos') { if(currentPid) renderPronosMatches(currentPid); }
       if (manual) toast(`${updated} cote${updated>1?'s':''} mise${updated>1?'s':''} à jour`);
     } else if (manual) { toast('Aucune cote disponible'); }
   } catch(e) {
@@ -2134,7 +2445,7 @@ async function syncFromAPI(manual = false) {
       await save();
       const active = document.querySelector('.view.active')?.id;
       if (active==='view-resultats'&&S.adminOpen) renderResultsContent();
-      if (active==='view-pronos') { const pid=document.getElementById('player-sel')?.value; if(pid) renderPronosMatches(pid); }
+      if (active==='view-pronos') { if(currentPid) renderPronosMatches(currentPid); }
       if (active==='view-classement') renderClassement();
       if (active==='view-famille') renderFamilyMode();
       setSyncBanner('ok', `<strong>${updated} résultat${updated>1?'s':''} mis à jour</strong>${liveCount?` · ${liveCount} en direct`:''}`);
@@ -2154,6 +2465,7 @@ async function syncFromAPI(manual = false) {
 load().then(() => {
   renderHome();
   startSync();
+  checkWelcome();
   if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
   syncFromAPI();
   const lastOddsSync = +localStorage.getItem('lotoFootOddsSync') || 0;

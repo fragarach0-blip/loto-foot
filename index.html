@@ -1339,7 +1339,7 @@ const FINAL_MATCHES = [
   {id:105,g:'SF',d:'2026-07-25',t1:'Vainqueur M101',t2:'Vainqueur M102'},
   {id:106,g:'SF',d:'2026-07-26',t1:'Vainqueur M103',t2:'Vainqueur M104'},
   {id:107,g:'P3',d:'2026-07-29',t1:'Perdant M105',t2:'Perdant M106'},
-  {id:108,g:'F',d:'2026-07-30',t1:'Vainqueur M105',t2:'Vainqueur M106'},
+  {id:108,g:'FIN',d:'2026-07-30',t1:'Vainqueur M105',t2:'Vainqueur M106'},
 ];
 
 MATCHES.push(...FINAL_MATCHES);
@@ -1428,7 +1428,7 @@ function isPredictionLocked(m) {
 }
 
 function matchStageLabel(g) {
-  return ({R32:'32es de finale', R16:'8es de finale', QF:'Quarts de finale', SF:'Demi-finales', P3:'Petite finale', F:'Finale'})[g] || `Groupe ${g}`;
+  return ({R32:'32es de finale', R16:'8es de finale', QF:'Quarts de finale', SF:'Demi-finales', P3:'Petite finale', FIN:'Finale'})[g] || `Groupe ${g}`;
 }
 
 function matchBadge(m, pt, done = false) {

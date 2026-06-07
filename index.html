@@ -949,6 +949,8 @@ nav button span { font-size:.7rem; }
 .tournoi-score-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; font-size:.78rem; }
 .tournoi-score-item { border:1px solid var(--border); border-radius:6px; padding:8px; background:var(--paper); }
 .tournoi-score-item strong { display:block; font-size:.9rem; color:var(--ink); margin-bottom:2px; }
+.tournoi-round-note { font-family:'DM Mono',monospace; font-size:.68rem; color:var(--ink-3); margin:-2px 0 8px; line-height:1.4; }
+.tournoi-match.locked { opacity:.55; }
 .team-pick-card { display:flex; align-items:center; gap:6px; padding:8px 10px; border:1.5px solid var(--border); border-radius:6px; cursor:pointer; background:var(--paper); font-size:.8rem; font-weight:600; transition:border-color .1s; min-width:120px; min-height:44px; flex:1; }
 .team-pick-card:hover { border-color:var(--ink); }
 .team-pick-card.disabled { opacity:.3; cursor:not-allowed; pointer-events:none; }
@@ -1224,17 +1226,6 @@ nav button span { font-size:.7rem; }
   </div>
 </div>
 
-<div class="modal-overlay" id="team-picker-modal" onclick="if(event.target===this)closeTeamPicker()">
-  <div class="modal" style="max-height:80vh;display:flex;flex-direction:column">
-    <div class="modal-drag"></div>
-    <h3 id="team-picker-title">Choisir une equipe</h3>
-    <input type="text" id="team-picker-search" class="form-input"
-      placeholder="Rechercher..." oninput="filterTeamPicker(this.value)"
-      style="margin-bottom:12px">
-    <div id="team-picker-list" style="overflow-y:auto;flex:1;display:flex;flex-wrap:wrap;gap:8px;padding:4px 0"></div>
-  </div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1397,7 +1388,7 @@ const FINAL_MATCHES = [
 MATCHES.push(...FINAL_MATCHES);
 
 // ── STATE ──
-let S = { players:[], preds:{}, results:{}, tournoi:{}, matchMeta:{}, adminCode:'1234', adminOpen:false };
+let S = { players:[], preds:{}, results:{}, matchMeta:{}, adminCode:'1234', adminOpen:false };
 let editId = null;
 let selColor = COLORS[0];
 let selPhoto = null;
@@ -1406,7 +1397,6 @@ let activeResFilter = 'all';
 let unlockedPlayers = {};
 let currentPid = null;
 let currentTournoiPid = null;
-let teamPickerContext = null;
 // PIN modal state
 let pinModalPlayerId = null;
 let pinModalCallback = null;
@@ -1418,7 +1408,6 @@ async function load() {
     const d = snap.data();
     S.players = d.players || [];
     S.preds = d.preds || {};
-    S.tournoi = d.tournoi || {};
     S.results = d.results || {};
     S.matchMeta = d.matchMeta || {};
     S.adminCode = d.adminCode || '1234';
@@ -1426,7 +1415,7 @@ async function load() {
 }
 
 async function save() {
-  const d = { players:S.players, preds:S.preds, tournoi:S.tournoi, results:S.results, matchMeta:S.matchMeta, adminCode:S.adminCode };
+  const d = { players:S.players, preds:S.preds, results:S.results, matchMeta:S.matchMeta, adminCode:S.adminCode };
   await stateRef.set(d);
 }
 
@@ -1436,7 +1425,6 @@ function startSync() {
     const d = snap.data();
     S.players = d.players || [];
     S.preds = d.preds || {};
-    S.tournoi = d.tournoi || {};
     S.results = d.results || {};
     S.matchMeta = d.matchMeta || {};
     if (d.adminCode) S.adminCode = d.adminCode;
@@ -1912,6 +1900,13 @@ const TOURNOI_LEVELS = [
   {key:'r16', label:'Huitiemes', desc:'16 equipes qui passent les 32es', size:16, pts:'1 pt / equipe'}
 ];
 const TOURNOI_POINTS = { r16:1, qf:2, sf:4, final:7, champion:10 };
+const TOURNOI_ROUNDS = [
+  {key:'r32', label:'32es de finale', ids:[77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92], note:'Les equipes viennent de tes scores de groupes.'},
+  {key:'r16', label:'8es de finale', ids:[93,94,95,96,97,98,99,100], note:'Les equipes viennent de tes vainqueurs des 32es.'},
+  {key:'qf', label:'Quarts de finale', ids:[101,102,103,104], note:'Les equipes viennent de tes vainqueurs des 8es.'},
+  {key:'sf', label:'Demi-finales', ids:[105,106], note:'Les equipes viennent de tes vainqueurs des quarts.'},
+  {key:'final', label:'Finale', ids:[108], note:'Les equipes viennent de tes vainqueurs des demies.'}
+];
 
 function htmlEscape(v) {
   return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1921,95 +1916,91 @@ function jsEscape(v) {
   return String(v ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 
-function getTournoiData(pid) {
-  const t = (S.tournoi && S.tournoi[pid]) || {};
+function predResultForMatch(pid, mid) {
+  const r = S.preds?.[pid]?.[mid];
+  if (!r || r.s1===''||r.s1==null||r.s2===''||r.s2==null) return null;
+  const s1 = +r.s1, s2 = +r.s2;
+  return isNaN(s1)||isNaN(s2) ? null : {s1, s2};
+}
+
+function predictedGroupTable(pid, group) {
+  const matches = MATCHES.filter(m=>m.g===group);
+  const table = {};
+  for (const m of matches) {
+    table[m.t1] ||= {team:m.t1, pts:0, gd:0, gf:0, complete:0};
+    table[m.t2] ||= {team:m.t2, pts:0, gd:0, gf:0, complete:0};
+    const r = predResultForMatch(pid, m.id);
+    if (!r) continue;
+    table[m.t1].gf += r.s1; table[m.t1].gd += r.s1-r.s2; table[m.t1].complete++;
+    table[m.t2].gf += r.s2; table[m.t2].gd += r.s2-r.s1; table[m.t2].complete++;
+    if (r.s1 > r.s2) table[m.t1].pts += 3;
+    else if (r.s2 > r.s1) table[m.t2].pts += 3;
+    else { table[m.t1].pts++; table[m.t2].pts++; }
+  }
+  const complete = matches.every(m=>!!predResultForMatch(pid, m.id));
   return {
-    champion: t.champion || '',
-    final: Array.isArray(t.final) ? [...new Set(t.final)].slice(0,2) : [],
-    sf: Array.isArray(t.sf) ? [...new Set(t.sf)].slice(0,4) : [],
-    qf: Array.isArray(t.qf) ? [...new Set(t.qf)].slice(0,8) : [],
-    r16: Array.isArray(t.r16) ? [...new Set(t.r16)].slice(0,16) : []
+    complete,
+    rows: Object.values(table).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||a.team.localeCompare(b.team))
   };
 }
 
-function saveTournoiData(pid, t) {
-  if (!S.tournoi) S.tournoi = {};
-  S.tournoi[pid] = {
-    champion: t.champion || '',
-    final: [...new Set(t.final || [])].slice(0,2),
-    sf: [...new Set(t.sf || [])].slice(0,4),
-    qf: [...new Set(t.qf || [])].slice(0,8),
-    r16: [...new Set(t.r16 || [])].slice(0,16)
-  };
+function predictedGroupRankTeam(pid, group, rank) {
+  const table = predictedGroupTable(pid, group);
+  return table.complete ? table.rows[rank-1]?.team || null : null;
 }
 
-function getUsedTeamsAbove(pid, level) {
-  const t = getTournoiData(pid);
+function predictedThirdPlaceAssignments(pid) {
+  const thirds = 'ABCDEFGHIJKL'.split('')
+    .map(g=>({group:g, table:predictedGroupTable(pid, g)}))
+    .filter(x=>x.table.complete && x.table.rows[2])
+    .map(x=>({group:x.group, ...x.table.rows[2]}))
+    .sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||a.group.localeCompare(b.group))
+    .slice(0, 8);
+  if (thirds.length < 8) return {};
+  const assignments = {};
   const used = new Set();
-  const stronger = {
-    champion: [],
-    final: [t.champion],
-    sf: [t.champion, ...t.final],
-    qf: [t.champion, ...t.final, ...t.sf],
-    r16: [t.champion, ...t.final, ...t.sf, ...t.qf]
+  for (const m of FINAL_MATCHES.filter(x=>x.g==='R32')) {
+    for (const side of ['t1','t2']) {
+      const slot = m[side];
+      const match = slot.match(/^3e ([A-L/]+)$/);
+      if (!match) continue;
+      const candidates = match[1].split('/');
+      const picked = thirds.find(t=>candidates.includes(t.group) && !used.has(t.group));
+      if (picked) { assignments[slot] = picked.team; used.add(picked.group); }
+    }
+  }
+  return assignments;
+}
+
+function predictedKnockoutSide(pid, mid, winner = true) {
+  const r = predResultForMatch(pid, mid);
+  const m = MATCHES.find(x=>x.id===mid);
+  if (!r || !m) return null;
+  const teams = predictedMatchTeams(pid, m);
+  if (!teams.t1 || !teams.t2) return null;
+  if (r.s1 > r.s2) return winner ? teams.t1 : teams.t2;
+  if (r.s2 > r.s1) return winner ? teams.t2 : teams.t1;
+  return null;
+}
+
+function predictedResolveTeamSlot(pid, slot) {
+  if (TEAMS[slot]) return slot;
+  let match = slot.match(/^(1er|2e) ([A-L])$/);
+  if (match) return predictedGroupRankTeam(pid, match[2], match[1] === '1er' ? 1 : 2);
+  match = slot.match(/^3e [A-L/]+$/);
+  if (match) return predictedThirdPlaceAssignments(pid)[slot] || null;
+  match = slot.match(/^Vainqueur M(\d+)$/);
+  if (match) return predictedKnockoutSide(pid, +match[1], true);
+  match = slot.match(/^Perdant M(\d+)$/);
+  if (match) return predictedKnockoutSide(pid, +match[1], false);
+  return null;
+}
+
+function predictedMatchTeams(pid, m) {
+  return {
+    t1: predictedResolveTeamSlot(pid, m.t1) || '',
+    t2: predictedResolveTeamSlot(pid, m.t2) || ''
   };
-  (stronger[level] || []).filter(Boolean).forEach(e => used.add(e));
-  return used;
-}
-
-function cascadeRemove(pid, team) {
-  const t = getTournoiData(pid);
-  ['r16','qf','sf','final'].forEach(lvl => {
-    t[lvl] = (t[lvl] || []).filter(e => e !== team);
-  });
-  if (t.champion === team) t.champion = '';
-  saveTournoiData(pid, t);
-}
-
-function canAddToLevel(t, level, team) {
-  const maxSizes = { r16:16, qf:8, sf:4, final:2 };
-  const needs = [];
-  if (level === 'champion') needs.push('final','sf','qf','r16');
-  if (level === 'final') needs.push('final','sf','qf','r16');
-  if (level === 'sf') needs.push('sf','qf','r16');
-  if (level === 'qf') needs.push('qf','r16');
-  if (level === 'r16') needs.push('r16');
-  return needs.every(lvl => (t[lvl] || []).includes(team) || (t[lvl] || []).length < maxSizes[lvl]);
-}
-
-function setTournoiTeam(pid, level, team, replaceTeam='') {
-  if (!S.tournoi) S.tournoi = {};
-  let t = getTournoiData(pid);
-  if (replaceTeam && replaceTeam !== team) {
-    cascadeRemove(pid, replaceTeam);
-    t = getTournoiData(pid);
-  }
-  if (!canAddToLevel(t, level, team)) {
-    toast('Retire une equipe avant de la remplacer');
-    return;
-  }
-  if (level === 'champion') {
-    if (!t.final.includes(team)) t.final.push(team);
-    if (!t.sf.includes(team)) t.sf.push(team);
-    if (!t.qf.includes(team)) t.qf.push(team);
-    if (!t.r16.includes(team)) t.r16.push(team);
-    t.champion = team;
-  } else {
-    if (!t[level].includes(team)) t[level].push(team);
-    if (level === 'final' && !t.sf.includes(team)) t.sf.push(team);
-    if (['final','sf'].includes(level) && !t.qf.includes(team)) t.qf.push(team);
-    if (['final','sf','qf'].includes(level) && !t.r16.includes(team)) t.r16.push(team);
-  }
-  saveTournoiData(pid, t);
-  save();
-  renderTournoi();
-}
-
-function removeTournoiTeam(pid, level, team) {
-  if (!S.tournoi || !S.tournoi[pid]) return;
-  cascadeRemove(pid, team);
-  save();
-  renderTournoi();
 }
 
 function selectTournoiPid(pid) {
@@ -2024,79 +2015,6 @@ function selectTournoiPid(pid) {
   }
   currentTournoiPid = pid;
   renderTournoi();
-}
-
-function openTeamPicker(pid, level, title, replaceTeam='') {
-  teamPickerContext = { pid, level, replaceTeam };
-  document.getElementById('team-picker-title').textContent = title;
-  document.getElementById('team-picker-search').value = '';
-  filterTeamPicker('');
-  document.getElementById('team-picker-modal').classList.add('open');
-  setTimeout(() => document.getElementById('team-picker-search').focus(), 100);
-}
-
-function closeTeamPicker() {
-  document.getElementById('team-picker-modal').classList.remove('open');
-  teamPickerContext = null;
-}
-
-function filterTeamPicker(query) {
-  const { pid, level, replaceTeam } = teamPickerContext || {};
-  const list = document.getElementById('team-picker-list');
-  if (!pid || !level || !list) return;
-  const t = getTournoiData(pid);
-  const alreadyInLevel = new Set(level === 'champion' ? [t.champion].filter(Boolean) : (t[level] || []));
-  const usedAbove = getUsedTeamsAbove(pid, level);
-  const q = String(query || '').toLowerCase();
-  const filtered = Object.keys(TEAMS).filter(team => team.toLowerCase().includes(q));
-  list.innerHTML = filtered.map(team => {
-    const selected = alreadyInLevel.has(team);
-    const blockedByAbove = usedAbove.has(team) && team !== replaceTeam;
-    const blockedByCapacity = !selected && !canAddToLevel(t, level, team);
-    const disabled = blockedByAbove || blockedByCapacity;
-    return `<div class="team-pick-card ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}"
-      onclick="selectTeamFromPicker('${jsEscape(team)}')">
-      <span style="font-size:1.1rem">${TEAMS[team] || '⚽'}</span>
-      <span>${htmlEscape(team)}</span>
-    </div>`;
-  }).join('');
-}
-
-function selectTeamFromPicker(team) {
-  if (!teamPickerContext) return;
-  const { pid, level, replaceTeam } = teamPickerContext;
-  closeTeamPicker();
-  setTournoiTeam(pid, level, team, replaceTeam);
-}
-
-function tournoiSlotHTML(pid, level, team, locked) {
-  const title = TOURNOI_LEVELS.find(l=>l.key===level)?.label || 'Tournoi';
-  if (team) {
-    return `<button class="tournoi-slot filled" onclick="openTeamPicker('${pid}','${level}','${jsEscape(title)}','${jsEscape(team)}')">
-      <span class="tournoi-team-main"><span>${TEAMS[team] || '⚽'}</span><span class="tournoi-team-name">${htmlEscape(team)}</span></span>
-      <span class="tournoi-remove" onclick="event.stopPropagation();removeTournoiTeam('${pid}','${level}','${jsEscape(team)}')">×</span>
-    </button>`;
-  }
-  const click = locked ? '' : `onclick="openTeamPicker('${pid}','${level}','${jsEscape(title)}')"`;
-  return `<button class="tournoi-slot ${locked ? 'locked' : ''}" ${click} title="${locked ? 'Choisis d abord ton champion' : ''}">+ Ajouter</button>`;
-}
-
-function renderTournoiSection(pid, levelInfo, t) {
-  const level = levelInfo.key;
-  const locked = level !== 'champion' && !t.champion;
-  const teams = level === 'champion' ? [t.champion] : [...(t[level] || [])];
-  const slots = Array.from({length:levelInfo.size}, (_, i) => tournoiSlotHTML(pid, level, teams[i] || '', locked));
-  const klass = levelInfo.size === 1 ? 'single' : levelInfo.size === 2 ? 'compact' : '';
-  return `<section class="tournoi-section">
-    <div class="tournoi-section-head">
-      <div>
-        <div class="tournoi-title">${htmlEscape(levelInfo.label)}</div>
-        <div class="tournoi-desc">${htmlEscape(levelInfo.desc)}</div>
-      </div>
-      <div class="tournoi-pts">${htmlEscape(levelInfo.pts)}</div>
-    </div>
-    <div class="tournoi-slots ${klass}">${slots.join('')}</div>
-  </section>`;
 }
 
 function officialTeamsAtRound() {
@@ -2117,13 +2035,31 @@ function officialTeamsAtRound() {
   };
 }
 
+function predictedTeamsAtRound(pid) {
+  const getRoundWinners = (matchIds) => {
+    const teams = new Set();
+    for (const mid of matchIds) {
+      const winner = predictedKnockoutSide(pid, mid, true);
+      if (winner) teams.add(winner);
+    }
+    return teams;
+  };
+  return {
+    r16: getRoundWinners([77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92]),
+    qf: getRoundWinners([93,94,95,96,97,98,99,100]),
+    sf: getRoundWinners([101,102,103,104]),
+    final: getRoundWinners([105,106]),
+    champion: predictedKnockoutSide(pid, 108, true) || ''
+  };
+}
+
 function tournoiPlayerStats(pid) {
-  const t = getTournoiData(pid);
+  const t = predictedTeamsAtRound(pid);
   const official = officialTeamsAtRound();
   let total = 0, detail = {};
   for (const level of ['r16','qf','sf','final']) {
     const off = official[level] || new Set();
-    const pred = t[level] || [];
+    const pred = [...(t[level] || new Set())];
     const correct = pred.filter(team => off.has(team)).length;
     detail[level] = { correct, total: pred.length, pts: correct * TOURNOI_POINTS[level] };
     total += detail[level].pts;
@@ -2134,7 +2070,7 @@ function tournoiPlayerStats(pid) {
   } else {
     detail.champion = { correct:0, pts:0 };
   }
-  const filled = (t.r16||[]).length + (t.qf||[]).length + (t.sf||[]).length + (t.final||[]).length + (t.champion ? 1 : 0);
+  const filled = [...t.r16].length + [...t.qf].length + [...t.sf].length + [...t.final].length + (t.champion ? 1 : 0);
   return { total, detail, filled, maxFilled:31 };
 }
 
@@ -2147,6 +2083,70 @@ function renderTournoiScore(pid) {
       <div class="tournoi-score-item"><strong>${st.filled}/31</strong>Pronostic rempli</div>
     </div>
   </div>`;
+}
+
+function tournoiPredFilledCount(pid) {
+  return TOURNOI_ROUNDS.flatMap(r=>r.ids).filter(mid=>!!predResultForMatch(pid, mid)).length;
+}
+
+function renderTournoiMatch(pid, m) {
+  const teams = predictedMatchTeams(pid, m);
+  const pr = S.preds[pid]?.[m.id] || {s1:'',s2:''};
+  const res = S.results[m.id];
+  const pt = (res && pr.s1!==''&&pr.s2!=='') ? pts(pr,res,m) : null;
+  const unresolved = !teams.t1 || !teams.t2;
+  const locked = isPredictionLocked(m) || unresolved;
+  const dateStr = matchKickoff(m).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  const badge = matchBadge(m, pt);
+  const dis = locked ? 'disabled' : '';
+  const v1 = pr.s1!==''&&pr.s1!=null ? pr.s1 : '';
+  const v2 = pr.s2!==''&&pr.s2!=null ? pr.s2 : '';
+  return `<div class="match-item tournoi-match ${unresolved ? 'locked' : ''}">
+    <div class="match-watermark">${m.id}</div>
+    <div class="match-meta"><span>${dateStr}</span>${badge}</div>
+    <div class="match-row">
+      <div class="team">${teams.t1 ? teamHTML(teams.t1) : '<span class="tname">A determiner</span>'}</div>
+      <div class="score-area">
+        <div class="score-steppers-top">
+          <button class="score-step-btn" onclick="adjustPred('${pid}',${m.id},'s1',1)" ${dis}>+</button>
+          <span class="score-area-gap"></span>
+          <button class="score-step-btn" onclick="adjustPred('${pid}',${m.id},'s2',1)" ${dis}>+</button>
+        </div>
+        <div class="score-row">
+          <input type="number" class="score-input ${v1!==''?'filled':''}" id="si-${m.id}-s1" min="0" max="20"
+            value="${v1}" oninput="updatePred('${pid}',${m.id},'s1',this.value)" placeholder="?" ${dis}>
+          <span class="score-sep">–</span>
+          <input type="number" class="score-input ${v2!==''?'filled':''}" id="si-${m.id}-s2" min="0" max="20"
+            value="${v2}" oninput="updatePred('${pid}',${m.id},'s2',this.value)" placeholder="?" ${dis}>
+        </div>
+        <div class="score-steppers-bot">
+          <button class="score-step-btn" onclick="adjustPred('${pid}',${m.id},'s1',-1)" ${dis}>−</button>
+          <span class="score-area-gap"></span>
+          <button class="score-step-btn" onclick="adjustPred('${pid}',${m.id},'s2',-1)" ${dis}>−</button>
+        </div>
+      </div>
+      <div class="team">${teams.t2 ? teamHTML(teams.t2) : '<span class="tname">A determiner</span>'}</div>
+    </div>
+    ${unresolved ? `<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Remplis d'abord les scores du tour precedent.</div>` : ''}
+    ${locked&&!unresolved&&!res?`<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Match commencÃ© â€” pronostic verrouillÃ©</div>`:''}
+    ${res&&res.s1!==''&&res.s1!=null?`<div class="official-score">RÃ©sultat officiel : <strong>${res.s1} â€“ ${res.s2}</strong></div>`:''}
+    ${oddsHTML(m)}
+  </div>`;
+}
+
+function renderTournoiRound(pid, round) {
+  const matches = round.ids.map(id=>MATCHES.find(m=>m.id===id)).filter(Boolean);
+  return `<section class="tournoi-section">
+    <div class="tournoi-section-head">
+      <div>
+        <div class="tournoi-title">${htmlEscape(round.label)}</div>
+        <div class="tournoi-desc">${matches.length} match${matches.length>1?'s':''}</div>
+      </div>
+      <div class="tournoi-pts">scores</div>
+    </div>
+    <div class="tournoi-round-note">${htmlEscape(round.note)}</div>
+    ${matches.map(m=>renderTournoiMatch(pid, m)).join('')}
+  </section>`;
 }
 
 function renderTournoi() {
@@ -2176,18 +2176,19 @@ function renderTournoi() {
     </div>`;
     return;
   }
-  const t = getTournoiData(currentTournoiPid);
   const st = tournoiPlayerStats(currentTournoiPid);
+  const koFilled = tournoiPredFilledCount(currentTournoiPid);
   const percent = Math.round(st.filled / st.maxFilled * 100);
   content.innerHTML = `<div class="tournoi-progress">
     <div class="tournoi-progress-head">
-      <span>Progression</span>
-      <span class="tournoi-progress-count">${st.filled}/${st.maxFilled} equipes</span>
+      <span>Bracket calcule</span>
+      <span class="tournoi-progress-count">${st.filled}/${st.maxFilled} equipes · ${koFilled}/31 scores KO</span>
     </div>
     <div class="tournoi-progress-track"><div class="tournoi-progress-fill" style="width:${percent}%"></div></div>
   </div>
   <div class="tournoi-wrap">
     <div class="helper-card">
+      Les equipes du tournoi viennent de tes scores : groupes -> 32es -> 8es -> quarts -> demies -> finale -> champion.<br>
       Huitiemes: 1 pt par equipe correcte (max 16)<br>
       Quarts: 2 pts par equipe correcte (max 16)<br>
       Demi-finales: 4 pts par equipe correcte (max 16)<br>
@@ -2196,7 +2197,7 @@ function renderTournoi() {
       Total max: 72 pts
     </div>
     ${renderTournoiScore(currentTournoiPid)}
-    ${TOURNOI_LEVELS.map(level => renderTournoiSection(currentTournoiPid, level, t)).join('')}
+    ${TOURNOI_ROUNDS.map(round => renderTournoiRound(currentTournoiPid, round)).join('')}
   </div>`;
 }
 
@@ -2343,6 +2344,10 @@ function updatePred(pid, mid, key, val) {
   event.target.classList.toggle('filled', val!=='');
   save();
   updateProgBar(pid);
+  const active = document.querySelector('.view.active')?.id;
+  const pr = S.preds[pid][mid];
+  if (active==='view-tournoi' && pr.s1!==''&&pr.s1!=null&&pr.s2!==''&&pr.s2!=null) setTimeout(()=>renderTournoi(), 0);
+  if (active==='view-classement') renderClassement();
 }
 
 function adjustPred(pid, mid, key, delta) {
@@ -2358,6 +2363,9 @@ function adjustPred(pid, mid, key, delta) {
   if (el) { el.value = newVal; el.classList.add('filled'); }
   save();
   updateProgBar(pid);
+  const active = document.querySelector('.view.active')?.id;
+  if (active==='view-tournoi') setTimeout(()=>renderTournoi(), 0);
+  if (active==='view-classement') renderClassement();
 }
 
 function updateProgBar(pid) {

@@ -1007,16 +1007,19 @@ nav button span { font-size:.7rem; }
   </div>
 
   <div class="home-section">
-    <div class="section-eyebrow">Deux facons de jouer</div>
+    <div class="section-eyebrow">Le parcours</div>
     <div class="rule-rows">
       <div class="rule-row" style="align-items:flex-start;gap:14px">
-        <span class="rule-row-label"><strong>1. Matchs</strong><br>Tu pronostiques les scores des vrais matchs. Pour les phases finales, il faut attendre que les vraies equipes soient connues.</span>
+        <span class="rule-row-label"><strong>1. Remplis les groupes</strong><br>Dans Matchs, commence par tous les scores de phase de groupes.</span>
       </div>
       <div class="rule-row" style="align-items:flex-start;gap:14px">
-        <span class="rule-row-label"><strong>2. Tournoi</strong><br>Tu n'attends pas la realite : l'app calcule ton tableau avec tes scores de groupes, puis tes vainqueurs tour apres tour.</span>
+        <span class="rule-row-label"><strong>2. Construis ton Tournoi</strong><br>L'app calcule tes qualifies. Tu remplis les 32es, puis les 8es, puis chaque tour dans l'ordre.</span>
+      </div>
+      <div class="rule-row" style="align-items:flex-start;gap:14px">
+        <span class="rule-row-label"><strong>3. Suis les vrais matchs</strong><br>Dans Matchs, les phases finales reelles se debloquent seulement quand les vraies equipes sont connues.</span>
       </div>
     </div>
-    <div class="helper-card">Simple : <strong>Matchs = calendrier reel</strong>. <strong>Tournoi = ton scenario complet</strong>.</div>
+    <div class="helper-card"><strong>Matchs</strong> = calendrier reel. <strong>Tournoi</strong> = ton scenario complet calcule par tes scores.</div>
   </div>
 
   <div class="home-section">
@@ -1549,6 +1552,10 @@ function flagHTML(name) {
 
 function teamHTML(name) {
   return `${flagHTML(name)}<span class="tname">${name}</span>`;
+}
+
+function teamsAreKnown(teams) {
+  return !!(TEAMS[teams.t1] && TEAMS[teams.t2]);
 }
 
 function oddsHTML(m) {
@@ -2226,17 +2233,58 @@ function renderTournoiMatch(pid, m) {
 
 function renderTournoiRound(pid, round) {
   const matches = round.ids.map(id=>MATCHES.find(m=>m.id===id)).filter(Boolean);
+  const filled = matches.filter(m=>isPredCompleteForMatch(S.preds?.[pid]?.[m.id], m)).length;
   return `<section class="tournoi-section">
     <div class="tournoi-section-head">
       <div>
         <div class="tournoi-title">${htmlEscape(round.label)}</div>
-        <div class="tournoi-desc">${matches.length} match${matches.length>1?'s':''}</div>
+        <div class="tournoi-desc">${filled}/${matches.length} match${matches.length>1?'s':''} remplis</div>
       </div>
       <div class="tournoi-pts">scores</div>
     </div>
     <div class="tournoi-round-note">${htmlEscape(round.note)}</div>
     ${matches.map(m=>renderTournoiMatch(pid, m)).join('')}
   </section>`;
+}
+
+function tournoiRoundStatus(pid, round) {
+  const matches = round.ids.map(id=>MATCHES.find(m=>m.id===id)).filter(Boolean);
+  const readyCount = matches.filter(m => {
+    const teams = predictedMatchTeams(pid, m);
+    return teams.t1 && teams.t2;
+  }).length;
+  const filled = matches.filter(m=>isPredCompleteForMatch(S.preds?.[pid]?.[m.id], m)).length;
+  return { ready:readyCount > 0, readyCount, filled, total:matches.length, complete:readyCount===matches.length && filled===matches.length };
+}
+
+function renderTournoiStepCard(round, status, state) {
+  const label = state === 'done' ? 'Termine' : state === 'current' ? 'A faire maintenant' : 'Verrouille';
+  const desc = state === 'locked'
+    ? 'Cette etape se debloque quand le tour precedent avance.'
+    : `${status.filled}/${status.total} match${status.total>1?'s':''} rempli${status.filled>1?'s':''}`;
+  return `<section class="tournoi-section ${state==='locked'?'locked':''}">
+    <div class="tournoi-section-head" style="margin-bottom:0">
+      <div>
+        <div class="tournoi-title">${htmlEscape(round.label)}</div>
+        <div class="tournoi-desc">${htmlEscape(desc)}</div>
+      </div>
+      <div class="tournoi-pts">${label}</div>
+    </div>
+  </section>`;
+}
+
+function renderGuidedTournoiRounds(pid) {
+  const statuses = TOURNOI_ROUNDS.map(round => ({ round, status:tournoiRoundStatus(pid, round) }));
+  const currentIndex = statuses.findIndex(x=>x.status.ready && !x.status.complete);
+  const firstLockedIndex = statuses.findIndex(x=>!x.status.ready);
+  if (currentIndex === -1 && firstLockedIndex === -1) {
+    return statuses.map(x=>renderTournoiStepCard(x.round, x.status, 'done')).join('');
+  }
+  return statuses.map((x, i) => {
+    if (i < currentIndex || (currentIndex === -1 && x.status.complete)) return renderTournoiStepCard(x.round, x.status, 'done');
+    if (i === currentIndex) return renderTournoiRound(pid, x.round);
+    return renderTournoiStepCard(x.round, x.status, 'locked');
+  }).join('');
 }
 
 function renderTournoi() {
@@ -2304,7 +2352,7 @@ function renderTournoi() {
       Total max: 72 pts
     </div>
     ${renderTournoiScore(currentTournoiPid)}
-    ${TOURNOI_ROUNDS.map(round => renderTournoiRound(currentTournoiPid, round)).join('')}
+    ${renderGuidedTournoiRounds(currentTournoiPid)}
   </div>`;
 }
 
@@ -2401,7 +2449,8 @@ function renderPronosMatches(pid) {
       const pr = preds[m.id]||{s1:'',s2:''};
       const res = S.results[m.id];
       const pt = (res && pr.s1!==''&&pr.s2!=='') ? pts(pr,res,m) : null;
-      const locked = isPredictionLocked(m);
+      const teamsKnown = !isFinalMatch(m) || teamsAreKnown(teams);
+      const locked = isPredictionLocked(m) || !teamsKnown;
       const dateStr = matchKickoff(m).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
       const badge = matchBadge(m, pt);
       const dis = locked ? 'disabled' : '';
@@ -2434,7 +2483,8 @@ function renderPronosMatches(pid) {
           </div>
           <div class="team">${teamHTML(teams.t2)}</div>
         </div>
-        ${locked&&!res?`<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Match commencé — pronostic verrouillé</div>`:''}
+        ${!teamsKnown?`<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Les equipes de ce match ne sont pas encore connues dans la vraie competition.</div>`:''}
+        ${teamsKnown&&locked&&!res?`<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Match commencé — pronostic verrouillé</div>`:''}
         ${res&&res.s1!==''&&res.s1!=null?`<div class="official-score">Résultat officiel : <strong>${res.s1} – ${res.s2}</strong></div>`:''}
         ${oddsHTML(m)}
       </div>`;

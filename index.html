@@ -2965,13 +2965,17 @@ function setSyncBanner(state, text) {
 }
 
 async function syncFromAPI(manual = false) {
-  setSyncBanner('spin', 'Récupération des résultats…');
+  if (manual) setSyncBanner('spin', 'Récupération des résultats…');
   try {
     const url = fdUrl('competitions/WC/matches?season=2026');
     const resp = await fetch(url, { headers: fdHeaders() });
     if (resp.status===401) { setSyncBanner('err', '<strong>Clé API invalide</strong>'); if(manual) toast('Clé API invalide'); return; }
-    if (resp.status===403) { setSyncBanner('err', '<strong>Accès refusé</strong>'); if(manual) toast('Accès refusé'); return; }
-    if (!resp.ok) { setSyncBanner('err', `Erreur API (${resp.status})`); return; }
+    if (resp.status===403) {
+      if (manual) { setSyncBanner('err', '<strong>Sync indisponible</strong> · API résultats non autorisée'); toast('API résultats non autorisée'); }
+      else console.warn('API sync unavailable: football-data access is restricted');
+      return;
+    }
+    if (!resp.ok) { if (manual) setSyncBanner('err', `Erreur API (${resp.status})`); return; }
     const data = await resp.json();
     const matches = data.matches || [];
     let updated=0, metaUpdated=0, liveCount=0;
@@ -3021,13 +3025,15 @@ async function syncFromAPI(manual = false) {
       setSyncBanner('ok', `<strong>${updated} résultat${updated>1?'s':''} mis à jour</strong>${liveCount?` · ${liveCount} en direct`:''}`);
       if (manual) toast(`${updated} résultat${updated>1?'s':''} sync`);
     } else {
-      setSyncBanner('ok', `À jour${liveCount?` · ${liveCount} en direct`:''}`);
+      if (manual) setSyncBanner('ok', `À jour${liveCount?` · ${liveCount} en direct`:''}`);
       if (manual) toast('Déjà à jour');
     }
   } catch(e) {
     console.error('API sync error:', e);
-    setSyncBanner('err', 'Erreur réseau — synchronisation impossible');
-    if (manual) toast('Erreur de connexion');
+    if (manual) {
+      setSyncBanner('err', 'Sync indisponible — API résultats inaccessible');
+      toast('API résultats inaccessible');
+    }
   }
 }
 

@@ -1383,10 +1383,10 @@ const FINAL_MATCHES = [
   {id:86,g:'R32',d:'2026-07-08',t1:'1er H',t2:'2e G'},
   {id:87,g:'R32',d:'2026-07-09',t1:'1er J',t2:'2e I'},
   {id:88,g:'R32',d:'2026-07-09',t1:'1er L',t2:'2e K'},
-  {id:89,g:'R32',d:'2026-07-10',t1:'3e A/B/C/D',t2:'3e E/F/G/H'},
-  {id:90,g:'R32',d:'2026-07-10',t1:'3e I/J/K/L',t2:'3e A/B/C/D'},
-  {id:91,g:'R32',d:'2026-07-11',t1:'3e E/F/G/H',t2:'3e I/J/K/L'},
-  {id:92,g:'R32',d:'2026-07-11',t1:'3e A/B/C/D',t2:'3e E/F/G/H'},
+  {id:89,g:'R32',d:'2026-07-10',t1:'3e #1',t2:'3e #2'},
+  {id:90,g:'R32',d:'2026-07-10',t1:'3e #3',t2:'3e #4'},
+  {id:91,g:'R32',d:'2026-07-11',t1:'3e #5',t2:'3e #6'},
+  {id:92,g:'R32',d:'2026-07-11',t1:'3e #7',t2:'3e #8'},
   {id:93,g:'R16',d:'2026-07-14',t1:'Vainqueur M77',t2:'Vainqueur M78'},
   {id:94,g:'R16',d:'2026-07-14',t1:'Vainqueur M79',t2:'Vainqueur M80'},
   {id:95,g:'R16',d:'2026-07-15',t1:'Vainqueur M81',t2:'Vainqueur M82'},
@@ -2012,17 +2012,7 @@ function predictedThirdPlaceAssignments(pid) {
     .slice(0, 8);
   if (thirds.length < 8) return {};
   const assignments = {};
-  const used = new Set();
-  for (const m of FINAL_MATCHES.filter(x=>x.g==='R32')) {
-    for (const side of ['t1','t2']) {
-      const slot = m[side];
-      const match = slot.match(/^3e ([A-L/]+)$/);
-      if (!match) continue;
-      const candidates = match[1].split('/');
-      const picked = thirds.find(t=>candidates.includes(t.group) && !used.has(t.group));
-      if (picked) { assignments[slot] = picked.team; used.add(picked.group); }
-    }
-  }
+  thirds.forEach((t, i) => { assignments[`3e #${i+1}`] = t.team; });
   return assignments;
 }
 
@@ -2044,7 +2034,7 @@ function predictedResolveTeamSlot(pid, slot) {
   if (TEAMS[slot]) return slot;
   let match = slot.match(/^(1er|2e) ([A-L])$/);
   if (match) return predictedGroupRankTeam(pid, match[2], match[1] === '1er' ? 1 : 2);
-  match = slot.match(/^3e [A-L/]+$/);
+  match = slot.match(/^3e (#\d+|[A-L/]+)$/);
   if (match) return predictedThirdPlaceAssignments(pid)[slot] || null;
   match = slot.match(/^Vainqueur M(\d+)$/);
   if (match) return predictedKnockoutSide(pid, +match[1], true);

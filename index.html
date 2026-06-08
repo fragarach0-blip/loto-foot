@@ -1512,7 +1512,15 @@ function matchKickoff(m) {
 function matchStatus(m) { return S.matchMeta?.[m.id]?.status || 'SCHEDULED'; }
 function isLiveStatus(status) { return ['IN_PLAY','PAUSED','LIVE'].includes(status); }
 function isClosedStatus(status) { return ['FINISHED','AWARDED','IN_PLAY','PAUSED','LIVE'].includes(status); }
+const TOURNOI_LOCK_DATE = new Date('2026-06-11T00:00:00');
+const KNOCKOUT_GROUPS = new Set(['R32','R16','QF','SF','P3','FIN']);
+
+function isTournoiGloballyLocked() {
+  return Date.now() >= TOURNOI_LOCK_DATE.getTime();
+}
+
 function isPredictionLocked(m) {
+  if (KNOCKOUT_GROUPS.has(m.g) && isTournoiGloballyLocked()) return true;
   const kickoff = matchKickoff(m);
   return isClosedStatus(matchStatus(m)) || (!isNaN(kickoff) && Date.now() >= kickoff.getTime());
 }
@@ -2219,9 +2227,10 @@ function renderTournoiMatch(pid, m) {
       </div>
       <div class="team">${teams.t2 ? teamHTML(teams.t2) : '<span class="tname">A determiner</span>'}</div>
     </div>
-    ${unresolved ? `<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Remplis d'abord les scores du tour precedent.</div>` : ''}
-    ${locked&&!unresolved&&!res?`<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Match commencÃ© â€” pronostic verrouillÃ©</div>`:''}
-    ${res&&res.s1!==''&&res.s1!=null?`<div class="official-score">RÃ©sultat officiel : <strong>${res.s1} â€“ ${res.s2}</strong></div>`:''}
+    ${unresolved ? `<div class=”match-item-tip” style=”margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)”>Remplis d'abord les scores du tour precedent.</div>` : ''}
+    ${locked&&!unresolved&&!res&&isTournoiGloballyLocked()?`<div class=”match-item-tip” style=”margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)”>Pronostics verrouilles depuis le debut de la Coupe du Monde.</div>`:''}
+    ${locked&&!unresolved&&!res&&!isTournoiGloballyLocked()?`<div class=”match-item-tip” style=”margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)”>Match commence — pronostic verrouille</div>`:''}
+    ${res&&res.s1!==''&&res.s1!=null?`<div class=”official-score”>Resultat officiel : <strong>${res.s1} — ${res.s2}</strong></div>`:''}
     ${oddsHTML(m)}
   </div>`;
 }

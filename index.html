@@ -2269,16 +2269,10 @@ function renderTournoiStepCard(round, status, state) {
 }
 
 function renderGuidedTournoiRounds(pid) {
-  const statuses = TOURNOI_ROUNDS.map(round => ({ round, status:tournoiRoundStatus(pid, round) }));
-  const currentIndex = statuses.findIndex(x=>x.status.ready && !x.status.complete);
-  const firstLockedIndex = statuses.findIndex(x=>!x.status.ready);
-  if (currentIndex === -1 && firstLockedIndex === -1) {
-    return statuses.map(x=>renderTournoiStepCard(x.round, x.status, 'done')).join('');
-  }
-  return statuses.map((x, i) => {
-    if (i < currentIndex || (currentIndex === -1 && x.status.complete)) return renderTournoiStepCard(x.round, x.status, 'done');
-    if (i === currentIndex) return renderTournoiRound(pid, x.round);
-    return renderTournoiStepCard(x.round, x.status, 'locked');
+  return TOURNOI_ROUNDS.map(round => {
+    const status = tournoiRoundStatus(pid, round);
+    if (!status.ready) return renderTournoiStepCard(round, status, 'locked');
+    return renderTournoiRound(pid, round);
   }).join('');
 }
 

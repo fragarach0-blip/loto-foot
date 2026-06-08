@@ -1535,8 +1535,8 @@ function matchBadge(m, pt, done = false) {
 function matchTeams(m) {
   const meta = S.matchMeta?.[m.id] || {};
   return {
-    t1: meta.t1 || resolveTeamSlot(m.t1) || m.t1,
-    t2: meta.t2 || resolveTeamSlot(m.t2) || m.t2
+    t1: meta.t1 || resolveTeamSlot(m.t1, m.id, 't1') || m.t1,
+    t2: meta.t2 || resolveTeamSlot(m.t2, m.id, 't2') || m.t2
   };
 }
 
@@ -1637,17 +1637,17 @@ function thirdPlaceAssignments() {
       if (!match) continue;
       const candidates = match[1].split('/');
       const picked = thirds.find(t=>candidates.includes(t.group) && !used.has(t.group));
-      if (picked) { assignments[slot] = picked.team; used.add(picked.group); }
+      if (picked) { assignments[`${m.id}_${side}`] = picked.team; used.add(picked.group); }
     }
   }
   return assignments;
 }
 
-function resolveTeamSlot(slot) {
+function resolveTeamSlot(slot, matchId, side) {
   let match = slot.match(/^(1er|2e) ([A-L])$/);
   if (match) return groupRankTeam(match[2], match[1] === '1er' ? 1 : 2);
   match = slot.match(/^3e [A-L/]+$/);
-  if (match) return thirdPlaceAssignments()[slot] || null;
+  if (match) return thirdPlaceAssignments()[`${matchId}_${side}`] || null;
   match = slot.match(/^Vainqueur M(\d+)$/);
   if (match) return knockoutSide(+match[1], true);
   match = slot.match(/^Perdant M(\d+)$/);
@@ -2020,7 +2020,7 @@ function predictedThirdPlaceAssignments(pid) {
       if (!match) continue;
       const candidates = match[1].split('/');
       const picked = thirds.find(t=>candidates.includes(t.group) && !used.has(t.group));
-      if (picked) { assignments[slot] = picked.team; used.add(picked.group); }
+      if (picked) { assignments[`${m.id}_${side}`] = picked.team; used.add(picked.group); }
     }
   }
   return assignments;
@@ -2040,12 +2040,12 @@ function predictedKnockoutSide(pid, mid, winner = true) {
   return null;
 }
 
-function predictedResolveTeamSlot(pid, slot) {
+function predictedResolveTeamSlot(pid, slot, matchId, side) {
   if (TEAMS[slot]) return slot;
   let match = slot.match(/^(1er|2e) ([A-L])$/);
   if (match) return predictedGroupRankTeam(pid, match[2], match[1] === '1er' ? 1 : 2);
   match = slot.match(/^3e [A-L/]+$/);
-  if (match) return predictedThirdPlaceAssignments(pid)[slot] || null;
+  if (match) return predictedThirdPlaceAssignments(pid)[`${matchId}_${side}`] || null;
   match = slot.match(/^Vainqueur M(\d+)$/);
   if (match) return predictedKnockoutSide(pid, +match[1], true);
   match = slot.match(/^Perdant M(\d+)$/);
@@ -2055,8 +2055,8 @@ function predictedResolveTeamSlot(pid, slot) {
 
 function predictedMatchTeams(pid, m) {
   return {
-    t1: predictedResolveTeamSlot(pid, m.t1) || '',
-    t2: predictedResolveTeamSlot(pid, m.t2) || ''
+    t1: predictedResolveTeamSlot(pid, m.t1, m.id, 't1') || '',
+    t2: predictedResolveTeamSlot(pid, m.t2, m.id, 't2') || ''
   };
 }
 

@@ -2849,16 +2849,17 @@ async function notifyUser(title, body, tag) {
 }
 
 // ── API ──
-const API_KEY = '537561c0fa7943d69a67c7ad53c671f3';
 const ODDS_API_KEY = '80941ab267df6c39865e65451ebb387f';
 const ODDS_API_SPORT = 'soccer_fifa_world_cup';
-const IS_LOCAL = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-function fdUrl(path) {
-  if (IS_LOCAL) return `/api-proxy/${path}`;
-  const sep = path.includes('?') ? '&' : '?';
-  return `https://api.football-data.org/v4/${path}${sep}token=${API_KEY}`;
+// TheSportsDB — gratuit, pas de clé requise (league id 4429 = FIFA World Cup)
+const TSDB_URL = 'https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4429&s=2026';
+function tsdbStatusToFd(s) {
+  if (!s) return 'SCHEDULED';
+  if (['FT','AET','PEN'].includes(s)) return 'FINISHED';
+  if (['1H','2H','ET','P','BT'].includes(s)) return 'IN_PLAY';
+  if (s === 'HT') return 'PAUSED';
+  return 'SCHEDULED';
 }
-function fdHeaders() { return {}; }
 
 const API_TEAM_MAP = {
   'Mexico':'Mexique','South Africa':'Afrique du Sud','Korea Republic':'Corée du Sud',
@@ -2967,47 +2968,39 @@ function setSyncBanner(state, text) {
 async function syncFromAPI(manual = false) {
   if (manual) setSyncBanner('spin', 'Récupération des résultats…');
   try {
-    const url = fdUrl('competitions/WC/matches?season=2026');
-    const resp = await fetch(url, { headers: fdHeaders() });
-    if (resp.status===401) { setSyncBanner('err', '<strong>Clé API invalide</strong>'); if(manual) toast('Clé API invalide'); return; }
-    if (resp.status===403) {
-      if (manual) { setSyncBanner('err', '<strong>Sync indisponible</strong> · API résultats non autorisée'); toast('API résultats non autorisée'); }
-      else console.warn('API sync unavailable: football-data access is restricted');
-      return;
-    }
+    const resp = await fetch(TSDB_URL);
     if (!resp.ok) { if (manual) setSyncBanner('err', `Erreur API (${resp.status})`); return; }
     const data = await resp.json();
-    const matches = data.matches || [];
+    const matches = data.events || [];
     let updated=0, metaUpdated=0, liveCount=0;
     for (const apiMatch of matches) {
-      const home = API_TEAM_MAP[apiMatch.homeTeam?.name] || apiMatch.homeTeam?.shortName;
-      const away = API_TEAM_MAP[apiMatch.awayTeam?.name] || apiMatch.awayTeam?.shortName;
+      const home = API_TEAM_MAP[apiMatch.strHomeTeam] || apiMatch.strHomeTeam;
+      const away = API_TEAM_MAP[apiMatch.strAwayTeam] || apiMatch.strAwayTeam;
       if (!home||!away) continue;
       const lookup = findMatchLookup(home, away);
       if (!lookup) continue;
       const matchId = typeof lookup==='object' ? lookup.id : lookup;
       const swapped = typeof lookup==='object' && lookup.swapped;
+      const status = tsdbStatusToFd(apiMatch.strStatus);
+      const utcDate = apiMatch.dateEvent && apiMatch.strTime
+        ? `${apiMatch.dateEvent}T${apiMatch.strTime}Z` : null;
       const previousMeta = S.matchMeta[matchId]||{};
-      const nextMeta = {
-        ...previousMeta,
-        status: apiMatch.status||previousMeta.status||'SCHEDULED',
-        utcDate: apiMatch.utcDate||previousMeta.utcDate||null,
-        winner: apiMatch.score?.winner||previousMeta.winner||null
-      };
-      if (previousMeta.status!==nextMeta.status||previousMeta.utcDate!==nextMeta.utcDate||previousMeta.winner!==nextMeta.winner) {
+      const nextMeta = { ...previousMeta, status, ...(utcDate ? {utcDate} : {}) };
+      if (previousMeta.status!==nextMeta.status||previousMeta.utcDate!==nextMeta.utcDate) {
         S.matchMeta[matchId] = nextMeta; metaUpdated++;
       }
-      if (isLiveStatus(nextMeta.status)) {
+      if (isLiveStatus(status)) {
         liveCount++;
-        const liveKey = `lotoFootLiveNotified:${matchId}:${nextMeta.status}`;
+        const liveKey = `lotoFootLiveNotified:${matchId}:${status}`;
         if (!localStorage.getItem(liveKey)) {
           localStorage.setItem(liveKey, '1');
           notifyUser('Match en direct', `${home} - ${away} vient de commencer`, `live-${matchId}`);
         }
       }
-      if (!['FINISHED','IN_PLAY','PAUSED'].includes(apiMatch.status)||apiMatch.score?.fullTime?.home==null) continue;
-      const s1 = swapped ? String(apiMatch.score.fullTime.away) : String(apiMatch.score.fullTime.home);
-      const s2 = swapped ? String(apiMatch.score.fullTime.home) : String(apiMatch.score.fullTime.away);
+      if (!['FINISHED','IN_PLAY','PAUSED'].includes(status)) continue;
+      if (apiMatch.intHomeScore==null||apiMatch.intAwayScore==null) continue;
+      const s1 = swapped ? String(apiMatch.intAwayScore) : String(apiMatch.intHomeScore);
+      const s2 = swapped ? String(apiMatch.intHomeScore) : String(apiMatch.intAwayScore);
       const current = S.results[matchId];
       if (!current||current.s1!==s1||current.s2!==s2) {
         S.results[matchId] = {s1, s2}; updated++;

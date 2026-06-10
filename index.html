@@ -2243,10 +2243,10 @@ function renderTournoiMatch(pid, m) {
       </div>
       <div class=”team”>${teams.t2 ? teamHTML(teams.t2) : '<span class=”tname”>A determiner</span>'}</div>
     </div>
-    ${unresolved ? `<div class=”match-item-tip” style=”margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)”>Remplis d'abord les scores du tour precedent.</div>` : ''}
-    ${locked&&!unresolved&&!res&&isTournoiGloballyLocked()?`<div class=”match-item-tip” style=”margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)”>Pronostics verrouilles depuis le debut de la Coupe du Monde.</div>`:''}
-    ${locked&&!unresolved&&!res&&!isTournoiGloballyLocked()?`<div class=”match-item-tip” style=”margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)”>Match commence — pronostic verrouille</div>`:''}
-    ${res&&res.s1!==''&&res.s1!=null?`<div class=”official-score”>Resultat officiel : <strong>${res.s1} — ${res.s2}</strong></div>`:''}
+    ${unresolved ? `<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Remplis d'abord les scores du tour precedent.</div>` : ''}
+    ${locked&&!unresolved&&!res&&isTournoiGloballyLocked()?`<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Pronostics verrouilles depuis le debut de la Coupe du Monde.</div>`:''}
+    ${locked&&!unresolved&&!res&&!isTournoiGloballyLocked()?`<div class="match-item-tip" style="margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)">Match commence — pronostic verrouille</div>`:''}
+    ${res&&res.s1!==''&&res.s1!=null?`<div class="official-score">Resultat officiel : <strong>${res.s1} — ${res.s2}</strong></div>`:''}
     ${oddsHTML(m)}
   </div>`;
 }

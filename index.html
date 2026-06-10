@@ -1111,6 +1111,7 @@ nav button span { font-size:.7rem; }
     <div style="padding:12px 20px;background:var(--white);border-bottom:1px solid var(--border);display:flex;gap:8px">
       <button class="btn btn-outline btn-sm" style="flex:1" onclick="syncFromAPI(true)">Sync résultats</button>
       <button class="btn btn-outline btn-sm" style="flex:1" onclick="syncOddsFromAPI(true)">Sync cotes</button>
+      <button class="btn btn-outline btn-sm" style="flex:1" onclick="exportBackup()">Sauvegarder</button>
     </div>
     <div class="filter-tabs" id="res-filter-tabs">
       <div class="filter-tab active" onclick="filterResGroup('all',this)">Tous</div>
@@ -2538,6 +2539,25 @@ function updateProgBar(pid) {
   if (f) f.style.width=pct+'%';
   const pl = document.getElementById('prog-label');
   if (pl) pl.textContent=`${st.filled} / ${MATCHES.length}`;
+}
+
+function exportBackup() {
+  const backup = {
+    exportedAt: new Date().toISOString(),
+    players: S.players,
+    preds: S.preds,
+    results: S.results,
+    matchMeta: S.matchMeta,
+    adminCode: S.adminCode
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `loto-foot-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Sauvegarde téléchargée');
 }
 
 // ── RÉSULTATS ──

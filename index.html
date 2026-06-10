@@ -2076,16 +2076,12 @@ function predictedMatchTeams(pid, m) {
   };
 }
 
-function selectTournoiPid(pid) {
+function isTournoiViewOnly(pid) {
   const player = S.players.find(p=>p.id===pid);
-  if (!player) return;
-  if (player.pin && !unlockedPlayers[pid]) {
-    openPinModal(player, () => {
-      currentTournoiPid = pid;
-      renderTournoi();
-    });
-    return;
-  }
+  return !!(player && player.pin && !unlockedPlayers[pid]);
+}
+
+function selectTournoiPid(pid) {
   currentTournoiPid = pid;
   renderTournoi();
 }
@@ -2176,6 +2172,7 @@ function penaltyWinnerHTML(pid, m, teams, pr, disabled = false) {
 function setPredPenaltyWinner(pid, mid, side) {
   const match = MATCHES.find(m=>m.id===mid);
   if (match && isPredictionLocked(match)) { toast('Match verrouille'); return; }
+  if (isTournoiViewOnly(pid)) { toast('Entre ton PIN pour modifier'); return; }
   if (!S.preds[pid]) S.preds[pid]={};
   if (!S.preds[pid][mid]) S.preds[pid][mid]={s1:'',s2:''};
   S.preds[pid][mid].winner = side;
@@ -2213,9 +2210,10 @@ function renderTournoiMatch(pid, m) {
   const pt = (res && pr.s1!==''&&pr.s2!=='') ? pts(pr,res,m) : null;
   const unresolved = !teams.t1 || !teams.t2;
   const locked = isPredictionLocked(m) || unresolved;
+  const viewOnly = isTournoiViewOnly(pid);
   const dateStr = matchKickoff(m).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   const badge = matchBadge(m, pt);
-  const dis = locked ? 'disabled' : '';
+  const dis = (locked || viewOnly) ? 'disabled' : '';
   const v1 = pr.s1!==''&&pr.s1!=null ? pr.s1 : '';
   const v2 = pr.s2!==''&&pr.s2!=null ? pr.s2 : '';
   return `<div class="match-item tournoi-match ${unresolved ? 'locked' : ''}">
@@ -2241,9 +2239,9 @@ function renderTournoiMatch(pid, m) {
           <span class="score-area-gap"></span>
           <button class="score-step-btn" onclick="adjustPred('${pid}',${m.id},'s2',-1)" ${dis}>−</button>
         </div>
-        ${penaltyWinnerHTML(pid, m, teams, pr, locked)}
+        ${penaltyWinnerHTML(pid, m, teams, pr, locked || viewOnly)}
       </div>
-      <div class="team">${teams.t2 ? teamHTML(teams.t2) : '<span class="tname">A determiner</span>'}</div>
+      <div class=”team”>${teams.t2 ? teamHTML(teams.t2) : '<span class=”tname”>A determiner</span>'}</div>
     </div>
     ${unresolved ? `<div class=”match-item-tip” style=”margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)”>Remplis d'abord les scores du tour precedent.</div>` : ''}
     ${locked&&!unresolved&&!res&&isTournoiGloballyLocked()?`<div class=”match-item-tip” style=”margin-top:6px;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--ink-3)”>Pronostics verrouilles depuis le debut de la Coupe du Monde.</div>`:''}
@@ -2316,7 +2314,7 @@ function renderTournoi() {
     </div>`;
     return;
   }
-  if (S.players.length === 1 && !S.players[0].pin && !currentTournoiPid) currentTournoiPid = S.players[0].id;
+  if (S.players.length === 1 && !currentTournoiPid) currentTournoiPid = S.players[0].id;
   grid.innerHTML = S.players.map(p => `
     <button class="player-card-btn ${currentTournoiPid===p.id?'sel':''}" onclick="selectTournoiPid('${p.id}')">
       ${avatarHTML(p, 44, 22)}
@@ -2358,6 +2356,7 @@ function renderTournoi() {
     <div class="tournoi-progress-track"><div class="tournoi-progress-fill" style="width:${percent}%"></div></div>
   </div>
   <div class="tournoi-wrap">
+    ${isTournoiViewOnly(currentTournoiPid) ? `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--yellow-bg,#fefce8);border:1px solid var(--yellow-border,#fde047);border-radius:10px;margin-bottom:8px;font-size:.82rem;color:var(--ink-2)"><span style="flex:1">👁 Mode lecture — entre ton PIN pour modifier</span><button class="btn btn-sm btn-outline" onclick="openPinModal(S.players.find(p=>p.id===currentTournoiPid),()=>{renderTournoi()})">PIN</button></div>` : ''}
     <div class="helper-card">
       Les equipes du tournoi viennent de tes scores : groupes -> 32es -> 8es -> quarts -> demies -> finale -> champion.<br>
       Huitiemes: 1 pt par equipe correcte (max 16)<br>
@@ -2512,6 +2511,7 @@ function renderPronosMatches(pid) {
 function updatePred(pid, mid, key, val) {
   const match = MATCHES.find(m=>m.id===mid);
   if (match && isPredictionLocked(match)) { toast('Match verrouillé'); renderPronosMatches(pid); return; }
+  if (isTournoiViewOnly(pid)) { toast('Entre ton PIN pour modifier'); renderTournoi(); return; }
   const active = document.querySelector('.view.active')?.id;
   if (active==='view-pronos' && match && isFinalMatch(match) && !teamsAreKnown(matchTeams(match))) { toast(matchUnlockText(match)); renderPronosMatches(pid); return; }
   if (!S.preds[pid]) S.preds[pid]={};
@@ -2530,6 +2530,7 @@ function updatePred(pid, mid, key, val) {
 function adjustPred(pid, mid, key, delta) {
   const match = MATCHES.find(m=>m.id===mid);
   if (match && isPredictionLocked(match)) { toast('Match verrouillé'); return; }
+  if (isTournoiViewOnly(pid)) { toast('Entre ton PIN pour modifier'); return; }
   const active = document.querySelector('.view.active')?.id;
   if (active==='view-pronos' && match && isFinalMatch(match) && !teamsAreKnown(matchTeams(match))) { toast(matchUnlockText(match)); renderPronosMatches(pid); return; }
   if (!S.preds[pid]) S.preds[pid]={};

@@ -1865,7 +1865,7 @@ function openEditModal(id) {
 
 function editPlayer(id) {
   const p = S.players.find(x=>x.id===id); if (!p) return;
-  if (p.pin && !unlockedPlayers[id]) {
+  if (p.pin) {
     openPinModal(p, () => openEditModal(id));
   } else {
     openEditModal(id);

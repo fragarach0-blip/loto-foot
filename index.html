@@ -1153,9 +1153,9 @@ nav button span { font-size:.7rem; }
       <input type="text" id="pname-input" class="form-input" placeholder="ex : Charlotte" maxlength="18" onkeydown="if(event.key==='Enter')savePlayer()">
     </div>
     <div class="form-group">
-      <label class="form-label">PIN joueur (optionnel)</label>
+      <label class="form-label" id="pin-label">PIN joueur (optionnel)</label>
       <input type="password" id="pin-input" class="form-input" placeholder="4 chiffres pour protéger les pronos" inputmode="numeric" maxlength="8">
-      <div class="helper-text">Protège les pronos.</div>
+      <div class="helper-text" id="pin-helper">Protège les pronos.</div>
     </div>
     <div class="form-group">
       <label class="form-label">Photo de profil</label>
@@ -1838,22 +1838,38 @@ function openAddPlayer() {
   document.getElementById('modal-title').textContent = 'Nouveau joueur';
   document.getElementById('pname-input').value = '';
   document.getElementById('pin-input').value = '';
+  document.getElementById('pin-label').textContent = 'PIN joueur (optionnel)';
+  document.getElementById('pin-helper').textContent = 'Protège les pronos.';
+  document.getElementById('pin-input').placeholder = '4 chiffres pour protéger les pronos';
   document.getElementById('del-btn-wrap').style.display = 'none';
   resetPhotoUI(null);
   renderColorPicker();
   document.getElementById('player-modal').classList.add('open');
 }
 
-function editPlayer(id) {
+function openEditModal(id) {
   const p = S.players.find(x=>x.id===id); if (!p) return;
   editId = id; selColor = p.color; selPhoto = p.photo || null;
   document.getElementById('modal-title').textContent = 'Modifier ' + p.name;
   document.getElementById('pname-input').value = p.name;
-  document.getElementById('pin-input').value = p.pin || '';
+  document.getElementById('pin-input').value = '';
+  const hasPin = !!p.pin;
+  document.getElementById('pin-label').textContent = hasPin ? 'Nouveau PIN (laisser vide pour conserver)' : 'PIN joueur (optionnel)';
+  document.getElementById('pin-helper').textContent = hasPin ? 'PIN actuel défini. Entre un nouveau pour le changer.' : 'Protège les pronos.';
+  document.getElementById('pin-input').placeholder = hasPin ? '••••' : '4 chiffres pour protéger les pronos';
   document.getElementById('del-btn-wrap').style.display = 'block';
   resetPhotoUI(p.photo || null);
   renderColorPicker();
   document.getElementById('player-modal').classList.add('open');
+}
+
+function editPlayer(id) {
+  const p = S.players.find(x=>x.id===id); if (!p) return;
+  if (p.pin && !unlockedPlayers[id]) {
+    openPinModal(p, () => openEditModal(id));
+  } else {
+    openEditModal(id);
+  }
 }
 
 function renderColorPicker() {
@@ -1868,7 +1884,7 @@ function savePlayer() {
   if (!name) { toast('Saisis un prénom'); return; }
   if (editId) {
     const p = S.players.find(x=>x.id===editId);
-    if (p) { p.name=name; p.color=selColor; p.photo=selPhoto||null; p.pin=pin||''; }
+    if (p) { p.name=name; p.color=selColor; p.photo=selPhoto||null; p.pin=pin||p.pin||''; }
   } else {
     S.players.push({id:'p'+Date.now(), name, color:selColor, photo:selPhoto||null, pin:pin||''});
   }

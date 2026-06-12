@@ -802,6 +802,21 @@ nav button.active {
   font-weight: 500;
   color: var(--red);
 }
+.family-chart-card { margin-bottom: 8px; }
+.chart-wrap { padding: 12px 14px 4px; }
+.chart-empty {
+  padding: 24px 20px; text-align: center;
+  font-family: 'DM Mono', monospace; font-size: .78rem; color: var(--ink-3);
+}
+.chart-legend {
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  padding: 4px 18px 14px;
+}
+.chart-legend-item {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'DM Mono', monospace; font-size: .72rem; color: var(--ink-2);
+}
+.chart-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
 /* ── MISC ── */
 .admin-link {
@@ -2753,6 +2768,56 @@ function todayMatches() {
   return list;
 }
 
+function familyChartHTML(ranked) {
+  const finished = MATCHES.filter(m=>resultForMatch(m.id)).sort((a,b)=>matchKickoff(a)-matchKickoff(b));
+  if (!finished.length || !ranked.length) {
+    return `<div class="family-card family-chart-card">
+      <div class="family-card-title">Évolution des points</div>
+      <div class="chart-empty">Le graphique apparaîtra après les premiers résultats.</div>
+    </div>`;
+  }
+  const N = finished.length + 1; // +1 pour l'origine (0 pt avant le 1er match)
+  const series = ranked.map(p=>{
+    const preds = S.preds[p.id]||{};
+    let cum=0; const ys=[0];
+    for (const m of finished){ const pt=pts(preds[m.id], S.results[m.id], m); cum+=(pt||0); ys.push(cum); }
+    return {p, ys, total:cum};
+  });
+  const maxY = Math.max(1, ...series.map(s=>s.total));
+  const maxTick = Math.max(4, Math.ceil(maxY/4)*4);
+  const W=340,H=200,padL=28,padR=12,padT=12,padB=28;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const xAt=i=> padL + (N===1?0:i*plotW/(N-1));
+  const yAt=v=> padT + plotH - (v/maxTick)*plotH;
+  let grid='';
+  for(let t=0;t<=4;t++){
+    const val=maxTick*t/4, y=yAt(val);
+    grid+=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`;
+    grid+=`<text x="${padL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--ink-3)" font-family="'DM Mono',monospace">${val}</text>`;
+  }
+  const step=Math.max(1,Math.ceil((N-1)/6));
+  let xlab='';
+  for(let i=1;i<N;i++){
+    if((i-1)%step!==0 && i!==N-1) continue;
+    const d=matchKickoff(finished[i-1]);
+    xlab+=`<text x="${xAt(i).toFixed(1)}" y="${H-padB+13}" text-anchor="middle" font-size="8" fill="var(--ink-3)" font-family="'DM Mono',monospace">${d.getDate()}/${d.getMonth()+1}</text>`;
+  }
+  let lines='';
+  for(const s of series){
+    const c=s.p.color||'#888';
+    const pts_=s.ys.map((v,i)=>`${xAt(i).toFixed(1)},${yAt(v).toFixed(1)}`).join(' ');
+    lines+=`<polyline points="${pts_}" fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
+    lines+=`<circle cx="${xAt(N-1).toFixed(1)}" cy="${yAt(s.total).toFixed(1)}" r="2.6" fill="${c}"/>`;
+  }
+  const svg=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">${grid}${lines}${xlab}</svg>`;
+  const legend=`<div class="chart-legend">${series.map(s=>`<div class="chart-legend-item"><span class="chart-legend-dot" style="background:${s.p.color||'#888'}"></span>${s.p.name} · ${s.total}</div>`).join('')}</div>`;
+  return `<div class="family-card family-chart-card">
+    <div class="family-card-title">Évolution des points</div>
+    <div class="chart-wrap">${svg}</div>
+    ${legend}
+  </div>`;
+}
+
 function renderFamilyMode() {
   const el = document.getElementById('family-content');
   const ranked = S.players.map(p=>({...p,...playerStats(p.id)})).sort((a,b)=>b.total-a.total||b.exact-a.exact||b.correct-a.correct);
@@ -2763,6 +2828,7 @@ function renderFamilyMode() {
     <div class="family-hero-title">PRONO '26</div>
     <div class="family-hero-leader">${leader ? `${leader.name} · ${leader.total} pts` : 'En attente'}</div>
   </div>
+  ${familyChartHTML(ranked)}
   <div class="family-grid">
     <div class="family-card">
       <div class="family-card-title">Score</div>

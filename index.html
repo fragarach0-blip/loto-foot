@@ -2438,6 +2438,7 @@ function matchFilter(list, filter) {
 
 function renderPronosMatches(pid) {
   const player = S.players.find(p=>p.id===pid); if(!player) return;
+  const viewOnly = isTournoiViewOnly(pid);
   const preds = S.preds[pid]||{};
   const st = playerStats(pid);
   const pct = Math.round(st.filled/MATCHES.length*100);
@@ -2457,6 +2458,8 @@ function renderPronosMatches(pid) {
     </div>
   </div>`;
 
+  if (viewOnly) html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--yellow-bg,#fefce8);border:1px solid var(--yellow-border,#fde047);border-radius:10px;margin-bottom:8px;font-size:.82rem;color:var(--ink-2)"><span style="flex:1">👁 Mode lecture — entre ton PIN pour modifier</span><button class="btn btn-sm btn-outline" onclick="openPinModal(S.players.find(p=>p.id==='${pid}'),()=>renderPronosMatches('${pid}'))">PIN</button></div>`;
+
   for (const [grp, matches] of Object.entries(byGroup)) {
     html += `<div class="group-label">${matchStageLabel(grp)}</div>`;
     for (const m of matches) {
@@ -2468,7 +2471,7 @@ function renderPronosMatches(pid) {
       const locked = isPredictionLocked(m) || !teamsKnown;
       const dateStr = matchKickoff(m).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
       const badge = !teamsKnown ? '<span class="result-badge badge-locked">Plus tard</span>' : matchBadge(m, pt);
-      const dis = locked ? 'disabled' : '';
+      const dis = (locked || viewOnly) ? 'disabled' : '';
       const v1 = pr.s1!==''&&pr.s1!=null ? pr.s1 : '';
       const v2 = pr.s2!==''&&pr.s2!=null ? pr.s2 : '';
       html += `<div class="match-item">
@@ -2494,7 +2497,7 @@ function renderPronosMatches(pid) {
               <span class="score-area-gap"></span>
               <button class="score-step-btn" onclick="adjustPred('${pid}',${m.id},'s2',-1)" ${dis}>−</button>
             </div>
-            ${penaltyWinnerHTML(pid, m, teams, pr, locked)}
+            ${penaltyWinnerHTML(pid, m, teams, pr, locked || viewOnly)}
           </div>
           <div class="team">${teamHTML(teams.t2)}</div>
         </div>
